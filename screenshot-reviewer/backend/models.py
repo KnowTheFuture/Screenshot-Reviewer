@@ -20,11 +20,12 @@ class ScreenshotStatus(str, Enum):
 class Screenshot(BaseModel):
     id: str
     path: str
-    tags: List[str] = Field(default_factory=list)
-    summary: str = ""
+    summary: Optional[str] = None
+    tags: list[str] = []
+    confidence: Optional[float] = None
+    url: Optional[str] = None
     primary_category: Optional[str] = None
     status: ScreenshotStatus = ScreenshotStatus.PENDING
-    confidence: float = 0.0
     ocr_text: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

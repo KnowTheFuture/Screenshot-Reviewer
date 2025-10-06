@@ -14,7 +14,7 @@ function ScreenshotCard({ screenshot, isSelected, onToggle, onOpen }) {
         )}
       >
         <img
-          src={screenshot.thumbnail || screenshot.path}
+          src={screenshot.thumbnail || screenshot.url || screenshot.path}
           alt={screenshot.summary || screenshot.path}
           className="h-full w-full object-cover"
         />
@@ -96,7 +96,7 @@ export default function ScreenshotGrid({
       <div className="grid grid-cols-2 gap-4 px-6 pb-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {screenshots.map((screenshot) => (
           <ScreenshotCard
-            key={screenshot.id}
+            key={`${screenshot.id}-${screenshot.filename || screenshot.path}`}
             screenshot={screenshot}
             isSelected={selected.has(screenshot.id)}
             onToggle={onToggle}

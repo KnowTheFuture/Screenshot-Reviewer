@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+import logging
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..models import (
     BatchUpdateRequest,
@@ -21,6 +23,7 @@ from ..models import (
 from ..storage import load_lexicon, load_screenshots, save_screenshots
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 LOW_CONFIDENCE_THRESHOLD = 0.6
 GROUP_WINDOW_MINUTES = 3
@@ -154,8 +157,27 @@ def _build_progress(dataset: List[dict]) -> dict:
     }
 
 
+def _attach_preview_url(item: dict, request: Request) -> None:
+    raw_path = item.get("path")
+    filename = Path(raw_path).name if raw_path else None
+    if filename:
+        try:
+            item["url"] = str(request.url_for("files", path=filename))
+        except Exception:  # pragma: no cover - defensive
+            # Fallback to concatenating base URL if url_for fails for any reason.
+            base_url = str(request.base_url).rstrip("/")
+            item["url"] = f"{base_url}/files/{filename}"
+        file_path = Path(raw_path)
+        if raw_path and not file_path.exists():
+            logger.warning("Screenshot file missing: %s", raw_path)
+    else:
+        item["url"] = None
+        logger.warning("Screenshot path missing for item id %s", item.get("id"))
+
+
 @router.get("/", response_model=PaginatedResponse)
 def list_screenshots(
+    request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     filter: ScreenshotFilter = ScreenshotFilter.ALL,
@@ -181,6 +203,7 @@ def list_screenshots(
     for item in dataset:
         item.setdefault("id", uuid4().hex)
         item["suggestions"] = _generate_suggestions(item)
+        _attach_preview_url(item, request)
 
     paginated_source, groups = _with_groups(dataset, group_id)
 
@@ -188,6 +211,10 @@ def list_screenshots(
     total_pages = max((total - 1) // page_size + 1, 1)
     page = min(page, total_pages)
     page_items = _paginate(paginated_source, page, page_size)
+
+    for item in page_items:
+        if "url" in item and item["url"] is not None:
+            item["url"] = str(item["url"])
 
     screenshots = [Screenshot.model_validate(item) for item in page_items]
     progress = _build_progress(load_screenshots())
@@ -206,17 +233,18 @@ def list_screenshots(
 
 
 @router.get("/{screenshot_id}", response_model=Screenshot)
-def get_screenshot(screenshot_id: str):
+def get_screenshot(screenshot_id: str, request: Request):
     dataset = load_screenshots()
     for item in dataset:
         if item.get("id") == screenshot_id:
             item["suggestions"] = _generate_suggestions(item)
+            _attach_preview_url(item, request)
             return Screenshot.model_validate(item)
     raise HTTPException(status_code=404, detail="Screenshot not found")
 
 
 @router.put("/{screenshot_id}", response_model=Screenshot)
-def update_screenshot(screenshot_id: str, payload: ScreenshotUpdate):
+def update_screenshot(screenshot_id: str, payload: ScreenshotUpdate, request: Request):
     dataset = load_screenshots()
     updated_item = None
     for item in dataset:
@@ -232,16 +260,17 @@ def update_screenshot(screenshot_id: str, payload: ScreenshotUpdate):
         raise HTTPException(status_code=404, detail="Screenshot not found")
     save_screenshots(dataset)
     updated_item["suggestions"] = _generate_suggestions(updated_item)
+    _attach_preview_url(updated_item, request)
     return Screenshot.model_validate(updated_item)
 
 
 @router.post("/batch", response_model=dict)
-def batch_update(request: BatchUpdateRequest):
+def batch_update(batch_request: BatchUpdateRequest):
     dataset = load_screenshots()
-    id_set = set(request.ids)
+    id_set = set(batch_request.ids)
     if not id_set:
         raise HTTPException(status_code=400, detail="No screenshot ids provided")
-    update_data = request.payload.model_dump(exclude_unset=True)
+    update_data = batch_request.payload.model_dump(exclude_unset=True)
     if isinstance(update_data.get("status"), ScreenshotStatus):
         update_data["status"] = update_data["status"].value
     if not update_data:

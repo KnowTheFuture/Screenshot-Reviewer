@@ -100,3 +100,8 @@ All writes are atomic and safe for local development. Backups can be created man
 - `Ctrl+S` / `Cmd+S` — reserved for save hooks (wire up per modal)
 
 Enjoy faster screenshot triage!
+
+## TODO
+
+- Missing file handling improvements for screenshot previews (warn logs).
+- Validate /files/<filename> URL generation against edge cases.
