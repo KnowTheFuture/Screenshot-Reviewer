@@ -189,6 +189,9 @@ def list_screenshots(
         if category:
             dataset = [item for item in dataset if item.get("primary_category") == category]
 
+        if filter == ScreenshotFilter.PENDING:
+            dataset = [item for item in dataset if not (item.get("primary_category") or "").strip()]
+
         dataset = [item for item in dataset if _match_filter(item, filter_mode=filter)]
 
         if search:

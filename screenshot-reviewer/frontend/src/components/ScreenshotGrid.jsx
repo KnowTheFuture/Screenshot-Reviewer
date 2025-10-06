@@ -1,14 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 
-import { CATEGORY_COLORS } from "../constants/categoryColors.js";
-
-function ScreenshotCard({ screenshot, isSelected, onClick, onOpen, tint }) {
+function ScreenshotCard({ screenshot, isSelected, onClick, onOpen }) {
   const imageSrc = screenshot.thumbnail || screenshot.url || "/placeholder.png";
-  const primaryCategory = screenshot.primary_category || "";
-  const categoryColor = CATEGORY_COLORS[primaryCategory] || null;
-  const shouldTint = Boolean(tint && categoryColor);
-
   return (
     <div
       role="button"
@@ -22,17 +15,8 @@ function ScreenshotCard({ screenshot, isSelected, onClick, onOpen, tint }) {
       }}
       className={clsx(
         "screenshot-card group relative aspect-square w-full cursor-pointer overflow-hidden rounded-xl border transition",
-        { selected: isSelected, tinted: shouldTint }
+        { selected: isSelected }
       )}
-      data-category={primaryCategory}
-      style={
-        shouldTint
-          ? {
-              "--category-color": `${categoryColor}40`,
-              boxShadow: `0 0 0 3px ${categoryColor}33`,
-            }
-          : undefined
-      }
     >
       <img
         src={imageSrc}
@@ -47,9 +31,7 @@ function ScreenshotCard({ screenshot, isSelected, onClick, onOpen, tint }) {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent" />
       <div className="absolute left-2 top-2 flex items-center gap-2 text-xs text-white">
         {screenshot.primary_category && (
-          <span className="rounded bg-black/40 px-2 py-1">
-            {screenshot.primary_category}
-          </span>
+          <span className="rounded bg-black/40 px-2 py-1">{screenshot.primary_category}</span>
         )}
         {screenshot.status === "re-review" && (
           <span className="rounded bg-amber-500 px-2 py-1">Re-review</span>
@@ -84,101 +66,50 @@ export default function ScreenshotGrid({
   page,
   totalPages,
   onPageChange,
-  emptyMessage = "No screenshots match the current filters.",
-  showCategoryTint = false,
 }) {
-  const [selectedSet, setSelectedSet] = useState(() => new Set(selected ?? []));
-  const [lastIndex, setLastIndex] = useState(null);
+  const selectedSet = selected ?? new Set();
 
-  useEffect(() => {
-    if (selected) {
-      setSelectedSet(new Set(selected));
-      if (!selected.size) {
-        setLastIndex(null);
-      }
-    }
-  }, [selected]);
-
-  const updateSelection = useCallback(
-    (updater) => {
-      setSelectedSet((prev) => {
-        const next = updater(prev);
-        onSelectionChange?.(Array.from(next));
-        return next;
-      });
-    },
-    [onSelectionChange]
-  );
-
-  const selectSingle = (index) => {
-    if (!screenshots[index]) return;
-    updateSelection(() => new Set([screenshots[index].id]));
-  };
-
-  const toggleSelect = (index) => {
-    if (!screenshots[index]) return;
-    const id = screenshots[index].id;
-    updateSelection((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const selectRange = (start, end) => {
-    if (start === null || !screenshots.length) return;
-    const [min, max] = start < end ? [start, end] : [end, start];
-    const rangeIds = [];
-    for (let i = min; i <= max; i += 1) {
-      if (screenshots[i]) {
-        rangeIds.push(screenshots[i].id);
-      }
-    }
-    updateSelection(() => new Set(rangeIds));
-  };
-
-  const handleClick = (event, index) => {
+  const handleClick = (event, screenshotId, index) => {
     if (event.metaKey || event.ctrlKey) {
-      toggleSelect(index);
-    } else if (event.shiftKey && lastIndex !== null) {
-      selectRange(lastIndex, index);
-    } else {
-      selectSingle(index);
+      const copy = new Set(selectedSet);
+      if (copy.has(screenshotId)) copy.delete(screenshotId);
+      else copy.add(screenshotId);
+      onSelectionChange?.(Array.from(copy));
+      return;
     }
-    setLastIndex(index);
-  };
 
-  const handleSelectPage = () => {
-    const ids = screenshots.map((item) => item.id);
-    updateSelection(() => new Set(ids));
-    if (ids.length) {
-      setLastIndex(ids.length - 1);
+    if (event.shiftKey && selectedSet.size) {
+      const ids = screenshots.map((item) => item.id);
+      const lastSelected = ids.findIndex((id) => selectedSet.has(id));
+      if (lastSelected >= 0) {
+        const [start, end] = lastSelected < index ? [lastSelected, index] : [index, lastSelected];
+        onSelectionChange?.(ids.slice(start, end + 1));
+        return;
+      }
     }
+
+    onSelectionChange?.([screenshotId]);
   };
 
   return (
-    <section className="flex-1 overflow-auto">
+    <section className="flex-1 overflow-auto bg-slate-50">
       <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2 text-sm text-theme">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <button
             type="button"
-            className="rounded border border-theme px-3 py-1 hover:opacity-80"
-            onClick={handleSelectPage}
+            className="rounded border border-slate-200 px-3 py-1 hover:border-brand-400 hover:text-brand-600"
+            onClick={() => onSelectionChange?.(screenshots.map((item) => item.id))}
           >
             Select page
           </button>
           <span>{selectedSet.size} selected</span>
         </div>
-        <div className="flex items-center gap-3 text-sm text-theme">
+        <div className="flex items-center gap-3 text-sm text-slate-500">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange?.(page - 1)}
-            className="rounded border border-theme px-3 py-1 disabled:opacity-40"
+            className="rounded border border-slate-200 px-3 py-1 disabled:opacity-40"
           >
             Prev
           </button>
@@ -189,7 +120,7 @@ export default function ScreenshotGrid({
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange?.(page + 1)}
-            className="rounded border border-theme px-3 py-1 disabled:opacity-40"
+            className="rounded border border-slate-200 px-3 py-1 disabled:opacity-40"
           >
             Next
           </button>
@@ -198,19 +129,13 @@ export default function ScreenshotGrid({
       <div className="grid grid-cols-2 gap-4 px-6 pb-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {screenshots.map((screenshot, index) => (
           <ScreenshotCard
-            key={`${screenshot.id}-${screenshot.filename || screenshot.path}`}
+            key={screenshot.id}
             screenshot={screenshot}
             isSelected={selectedSet.has(screenshot.id)}
-            onClick={(event) => handleClick(event, index)}
+            onClick={(event) => handleClick(event, screenshot.id, index)}
             onOpen={onOpen}
-            tint={showCategoryTint}
           />
         ))}
-        {!screenshots.length && (
-          <div className="col-span-full rounded-xl border border-dashed border-theme bg-[var(--surface-color)] p-12 text-center text-theme/70">
-            {emptyMessage}
-          </div>
-        )}
       </div>
     </section>
   );

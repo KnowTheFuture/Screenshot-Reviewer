@@ -19,7 +19,6 @@ import ScreenshotModal from "../components/ScreenshotModal.jsx";
 import LexiconPanel from "../components/LexiconPanel.jsx";
 import SettingsModal from "../components/SettingsModal.jsx";
 import useSelectionStore from "../store/selectionStore.js";
-import useLocalSettings from "../hooks/useLocalSettings.js";
 import useSelectionPersistence from "../hooks/useSelectionPersistence.js";
 
 const PAGE_SIZE = 50;
@@ -34,8 +33,6 @@ export default function Home() {
   const [batchCategory, setBatchCategory] = useState("none");
   const [showSettings, setShowSettings] = useState(false);
 
-  const { settings, updateSettings, themes } = useLocalSettings();
-
   const { page, setPage, selected, clear, setSelection, setTriggerSave } = useSelectionStore();
   useSelectionPersistence(selected, setSelection);
 
@@ -43,7 +40,7 @@ export default function Home() {
   const categoryParam = categoryFilter === "all" || categoryFilter === "pending" ? undefined : categoryFilter;
 
   const screenshotsQuery = useQuery({
-    queryKey: ["screenshots", { page, filter, search, categoryFilter, groupId }],
+    queryKey: ["screenshots", { page, filter: effectiveFilter, search, categoryFilter, groupId }],
     queryFn: () =>
       fetchScreenshots({
         page,
@@ -109,10 +106,35 @@ export default function Home() {
   useEffect(() => {
     setTriggerSave(() => () => {});
   }, [setTriggerSave]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("appSettings");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.highlightColor) {
+          document.documentElement.style.setProperty("--highlight-color", parsed.highlightColor);
+        }
+      }
+    } catch (_error) {
+      document.documentElement.style.setProperty("--highlight-color", "#FFD700");
+    }
+  }, []);
 
+  const categoryList = useMemo(
+    () =>
+      (categoriesQuery.data ?? []).map((cat) => ({
+        ...cat,
+        count: cat.count ?? 0,
+        pending: cat.pending ?? 0,
+      })),
+    [categoriesQuery.data]
+  );
+
+  const lexiconEntries = lexiconQuery.data ?? [];
   const isPendingFilter = effectiveFilter === "pending";
-  const emptyMessage = isPendingFilter ? "🎉 All screenshots are categorized!" : "No screenshots match the current filters.";
-  const showCategoryTint = categoryFilter === "all" && effectiveFilter === "all";
+  const emptyMessage = isPendingFilter
+    ? "🎉 All screenshots are categorized!"
+    : "No screenshots match the current filters.";
 
   const handleAssignCategory = (categoryId) => {
     if (!selected.size) return;
@@ -145,20 +167,15 @@ export default function Home() {
     clear();
   };
 
-  const categoryList = useMemo(
-    () =>
-      (categoriesQuery.data ?? []).map((cat) => ({
-        ...cat,
-        count: cat.count ?? 0,
-        pending: cat.pending ?? 0,
-      })),
-    [categoriesQuery.data]
-  );
-
-  const lexiconEntries = lexiconQuery.data ?? [];
-
   return (
-    <div className="flex h-screen w-screen overflow-hidden text-theme" style={{ background: "var(--background-color)" }}>
+    <div className="relative flex h-screen w-screen overflow-hidden bg-slate-100 text-gray-900">
+      <button
+        type="button"
+        className="absolute right-4 top-4 rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
+        onClick={() => setShowSettings(true)}
+      >
+        ⚙️ Settings
+      </button>
       <Sidebar
         categories={categoryList}
         activeCategory={categoryFilter}
@@ -187,16 +204,16 @@ export default function Home() {
           onGroupNext={() => handleGroupNavigate(1)}
           currentGroup={groupMeta.current_index + 1}
           totalGroups={groupMeta.items.length}
-          onOpenSettings={() => setShowSettings(true)}
         />
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-theme bg-[var(--surface-color)] px-6 py-3 text-sm text-theme">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-3 text-sm">
           <div className="flex items-center gap-3">
             <select
-              className="rounded border border-theme px-3 py-2"
+              className="rounded border border-slate-200 px-3 py-2"
               value={batchCategory}
               onChange={(event) => setBatchCategory(event.target.value)}
             >
-              <option value="none">Assign to…</option>
+              <option value="none">Assign to…
+              </option>
               {categoryList.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -220,7 +237,7 @@ export default function Home() {
               Mark for deletion
             </button>
           </div>
-          <span className="text-theme/70">{selected.size} selected</span>
+          <span className="text-slate-500">{selected.size} selected</span>
         </div>
         <ScreenshotGrid
           screenshots={screenshots}
@@ -233,9 +250,10 @@ export default function Home() {
             setPage(value);
             clear();
           }}
-          emptyMessage={emptyMessage}
-          showCategoryTint={showCategoryTint}
         />
+        {screenshots.length === 0 && (
+          <div className="mt-8 text-center text-gray-500">{emptyMessage}</div>
+        )}
       </main>
       <LexiconPanel
         entries={lexiconEntries}
@@ -249,18 +267,7 @@ export default function Home() {
         onClose={() => setActiveScreenshot(null)}
         onSave={handleModalSave}
       />
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        settings={settings}
-        themes={themes}
-        onChangeSettings={updateSettings}
-        onCleared={() => {
-          clear();
-          setSelection([]);
-          queryClient.invalidateQueries({ queryKey: ["screenshots"] });
-        }}
-      />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

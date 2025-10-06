@@ -68,3 +68,8 @@ body[data-theme="matrix"] {
   border-color: var(--highlight-color);
   color: var(--highlight-color);
 }
+
+.screenshot-card.selected {
+  border: 4px solid var(--highlight-color, #FFD700);
+}
+
