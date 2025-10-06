@@ -2,11 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-.screenshot-card.selected {
-  border: 2px solid #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+:root {
+  --background-color: #f9fafb;
+  --surface-color: #ffffff;
+  --text-color: #111827;
+  --border-color: #e5e7eb;
+  --highlight-color: #ffd700;
 }
 
-:root {
-  color-scheme: light;
+body {
+  background: var(--background-color);
+  color: var(--text-color);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+body[data-theme="dark"],
+body[data-theme="matrix"] {
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.screenshot-card {
+  border-color: var(--border-color);
+  border-width: 1px;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+.screenshot-card.selected {
+  border-color: var(--highlight-color);
+  border-width: 4px;
+}
+
+.screenshot-card[data-category] {
+  position: relative;
+}
+
+.screenshot-card[data-category]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0.75rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: var(--category-color, transparent);
+  z-index: 0;
+}
+
+.screenshot-card[data-category].tinted::before {
+  opacity: 0.25;
+}
+
+.settings-surface {
+  background: var(--surface-color);
+}
+
+.text-theme {
+  color: var(--text-color);
+}
+
+.border-theme {
+  border-color: var(--border-color);
+}
+
+.button-highlight {
+  border-color: var(--highlight-color);
+  color: var(--highlight-color);
 }

@@ -1,5 +1,5 @@
 """Route modules for the Screenshot Reviewer backend."""
 
-from . import categories, lexicon, screenshots
+from . import categories, lexicon, screenshots, state
 
-__all__ = ["categories", "lexicon", "screenshots"]
+__all__ = ["categories", "lexicon", "screenshots", "state"]

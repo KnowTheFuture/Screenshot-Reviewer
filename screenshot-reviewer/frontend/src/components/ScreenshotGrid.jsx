@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 
-function ScreenshotCard({ screenshot, isSelected, onClick, onOpen }) {
+import { CATEGORY_COLORS } from "../constants/categoryColors.js";
+
+function ScreenshotCard({ screenshot, isSelected, onClick, onOpen, tint }) {
   const imageSrc = screenshot.thumbnail || screenshot.url || "/placeholder.png";
+  const primaryCategory = screenshot.primary_category || "";
+  const categoryColor = CATEGORY_COLORS[primaryCategory] || null;
+  const shouldTint = Boolean(tint && categoryColor);
 
   return (
     <div
@@ -17,12 +22,17 @@ function ScreenshotCard({ screenshot, isSelected, onClick, onOpen }) {
       }}
       className={clsx(
         "screenshot-card group relative aspect-square w-full cursor-pointer overflow-hidden rounded-xl border transition",
-        {
-          selected: isSelected,
-          "border-2 border-brand-500 ring-2 ring-brand-500/50": isSelected,
-          "border border-slate-200 hover:border-brand-200": !isSelected,
-        }
+        { selected: isSelected, tinted: shouldTint }
       )}
+      data-category={primaryCategory}
+      style={
+        shouldTint
+          ? {
+              "--category-color": `${categoryColor}40`,
+              boxShadow: `0 0 0 3px ${categoryColor}33`,
+            }
+          : undefined
+      }
     >
       <img
         src={imageSrc}
@@ -74,6 +84,8 @@ export default function ScreenshotGrid({
   page,
   totalPages,
   onPageChange,
+  emptyMessage = "No screenshots match the current filters.",
+  showCategoryTint = false,
 }) {
   const [selectedSet, setSelectedSet] = useState(() => new Set(selected ?? []));
   const [lastIndex, setLastIndex] = useState(null);
@@ -149,24 +161,24 @@ export default function ScreenshotGrid({
   };
 
   return (
-    <section className="flex-1 overflow-auto bg-slate-50">
+    <section className="flex-1 overflow-auto">
       <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-theme">
           <button
             type="button"
-            className="rounded border border-slate-200 px-3 py-1 hover:border-brand-400 hover:text-brand-600"
+            className="rounded border border-theme px-3 py-1 hover:opacity-80"
             onClick={handleSelectPage}
           >
             Select page
           </button>
           <span>{selectedSet.size} selected</span>
         </div>
-        <div className="flex items-center gap-3 text-sm text-slate-500">
+        <div className="flex items-center gap-3 text-sm text-theme">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange?.(page - 1)}
-            className="rounded border border-slate-200 px-3 py-1 disabled:opacity-40"
+            className="rounded border border-theme px-3 py-1 disabled:opacity-40"
           >
             Prev
           </button>
@@ -177,7 +189,7 @@ export default function ScreenshotGrid({
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange?.(page + 1)}
-            className="rounded border border-slate-200 px-3 py-1 disabled:opacity-40"
+            className="rounded border border-theme px-3 py-1 disabled:opacity-40"
           >
             Next
           </button>
@@ -191,11 +203,12 @@ export default function ScreenshotGrid({
             isSelected={selectedSet.has(screenshot.id)}
             onClick={(event) => handleClick(event, index)}
             onOpen={onOpen}
+            tint={showCategoryTint}
           />
         ))}
         {!screenshots.length && (
-          <div className="col-span-full rounded-xl border border-dashed border-slate-200 bg-white p-12 text-center text-slate-400">
-            No screenshots match the current filters.
+          <div className="col-span-full rounded-xl border border-dashed border-theme bg-[var(--surface-color)] p-12 text-center text-theme/70">
+            {emptyMessage}
           </div>
         )}
       </div>

@@ -52,7 +52,8 @@ def _match_filter(item: dict, *, filter_mode: ScreenshotFilter) -> bool:
     if filter_mode == ScreenshotFilter.ALL:
         return True
     if filter_mode == ScreenshotFilter.PENDING:
-        return status in {ScreenshotStatus.PENDING.value, ScreenshotStatus.DEFERRED.value}
+        no_category = not (item.get("primary_category") or "").strip()
+        return status in {ScreenshotStatus.PENDING.value, ScreenshotStatus.DEFERRED.value} or no_category
     if filter_mode == ScreenshotFilter.DEFERRED:
         return status == ScreenshotStatus.DEFERRED.value
     if filter_mode == ScreenshotFilter.RE_REVIEW:

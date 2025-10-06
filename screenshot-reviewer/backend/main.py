@@ -2,16 +2,24 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import os
 import re
+import signal
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .routes import categories, lexicon, screenshots
+from .routes import categories, lexicon, screenshots, state
+
+STATE_FILE = Path(__file__).resolve().parent / "selection_state.json"
+current_state: dict = {}
+
 
 def _configure_logging() -> None:
     """Configure logging once, honoring optional DEBUG and LOG_LEVEL settings."""
@@ -29,10 +37,63 @@ def _configure_logging() -> None:
 
 
 _configure_logging()
+logger = logging.getLogger("screenshot_reviewer")
 
 SCREENSHOTS_DIR = Path("/Volumes/990_Pro/Screenshots")
-
 LOCALHOST_ORIGIN_REGEX = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$", re.IGNORECASE)
+
+
+def load_selection_state() -> None:
+    if STATE_FILE.exists():
+        try:
+            data = json.loads(STATE_FILE.read_text())
+            current_state.clear()
+            current_state.update(data)
+            logger.info("🔄 Restored selection state from %s", STATE_FILE)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("⚠️ Failed to restore selection state: %s", exc)
+    else:
+        logger.debug("No existing selection state file found at %s", STATE_FILE)
+
+
+async def save_selection_state() -> None:
+    try:
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        STATE_FILE.write_text(json.dumps(current_state))
+        logger.info("💾 Selection state saved to %s", STATE_FILE)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("❌ Failed to save selection state: %s", exc)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("🚀 Application startup")
+    load_selection_state()
+    yield
+    logger.info("🛑 Application shutdown")
+    await save_selection_state()
+
+
+def _handle_exit(sig: signal.Signals, _frame) -> None:
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        logger.debug("No running event loop to handle signal %s", sig.name)
+        return
+
+    if loop.is_closed():
+        return
+
+    logger.info("📴 Received %s, scheduling state save", sig.name)
+    loop.create_task(save_selection_state())
+
+
+# Register signal handlers if possible (ignored in unsupported environments)
+try:  # pragma: no cover - platform dependent
+    signal.signal(signal.SIGINT, _handle_exit)
+    signal.signal(signal.SIGTERM, _handle_exit)
+except (ValueError, RuntimeError):
+    logger.debug("Signal handlers already registered or unsupported")
 
 
 def _sanitize_origins(raw_value: str) -> list[str]:
@@ -57,39 +118,46 @@ def _build_cors_config() -> tuple[list[str], str | None]:
     return explicit, LOCALHOST_ORIGIN_REGEX.pattern
 
 
-allow_origins, allow_origin_regex = _build_cors_config()
+def _create_app() -> FastAPI:
+    allow_origins, allow_origin_regex = _build_cors_config()
 
-cors_kwargs = dict(
-    allow_origins=allow_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-if allow_origin_regex:
-    cors_kwargs["allow_origin_regex"] = allow_origin_regex
+    app_instance = FastAPI(title="Screenshot Reviewer API", version="2.0.0", lifespan=lifespan)
+    app_instance.debug = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
 
-app = FastAPI(title="Screenshot Reviewer API", version="2.0.0")
-app.debug = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
-
-app.add_middleware(CORSMiddleware, **cors_kwargs)
-
-# ✅ Include routers
-app.include_router(screenshots.router, prefix="/api/screenshots", tags=["Screenshots"])
-app.include_router(categories.router, prefix="/api/categories", tags=["Categories"])
-app.include_router(lexicon.router, prefix="/api/lexicon", tags=["Lexicon"])
-
-if SCREENSHOTS_DIR.exists():
-    app.mount("/files", StaticFiles(directory=SCREENSHOTS_DIR), name="files")
-
-@app.get("/api/health")
-def healthcheck():
-    return {"status": "ok"}
-
-# ✅ Serve frontend if built
-frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-if frontend_dist.exists():
-    app.mount(
-        "/",
-        StaticFiles(directory=frontend_dist, html=True),
-        name="frontend",
+    cors_kwargs = dict(
+        allow_origins=allow_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
+    if allow_origin_regex:
+        cors_kwargs["allow_origin_regex"] = allow_origin_regex
+
+    app_instance.add_middleware(CORSMiddleware, **cors_kwargs)
+
+    # ✅ Include routers
+    app_instance.include_router(screenshots.router, prefix="/api/screenshots", tags=["Screenshots"])
+    app_instance.include_router(categories.router, prefix="/api/categories", tags=["Categories"])
+    app_instance.include_router(lexicon.router, prefix="/api/lexicon", tags=["Lexicon"])
+    app_instance.include_router(state.router, tags=["State"])
+
+    if SCREENSHOTS_DIR.exists():
+        app_instance.mount("/files", StaticFiles(directory=SCREENSHOTS_DIR), name="files")
+
+    @app_instance.get("/api/health")
+    def healthcheck():
+        return {"status": "ok"}
+
+    # ✅ Serve frontend if built
+    frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+    if frontend_dist.exists():
+        app_instance.mount(
+            "/",
+            StaticFiles(directory=frontend_dist, html=True),
+            name="frontend",
+        )
+
+    return app_instance
+
+
+app = _create_app()

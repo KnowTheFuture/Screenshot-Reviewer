@@ -1,18 +1,25 @@
 import { useState } from "react";
 import clsx from "clsx";
 
-function CategoryItem({ category, isActive, onClick }) {
+import { CATEGORY_COLORS } from "../constants/categoryColors.js";
+
+const DEFAULT_PENDING_COLOR = "#F97316";
+
+function CategoryItem({ category, isActive, onClick, color }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={clsx(
-        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-slate-100",
-        isActive ? "bg-slate-100 text-brand-700" : "text-slate-600"
+        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition",
+        isActive ? "bg-[var(--surface-color)]/80 text-theme" : "text-theme/70 hover:bg-[var(--surface-color)]/60"
       )}
     >
-      <span className="font-medium">{category.name}</span>
-      <span className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
+      <span className="flex items-center gap-2 font-medium">
+        {color && <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />}
+        {category.name}
+      </span>
+      <span className="rounded bg-[var(--border-color)]/40 px-2 py-0.5 text-xs text-theme/70">
         {category.count}
       </span>
     </button>
@@ -49,9 +56,9 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-white">
+    <aside className="settings-surface flex h-full w-64 flex-col border-r border-theme">
       <div className="flex items-center justify-between px-4 py-4">
-        <h2 className="text-lg font-semibold text-slate-900">Categories</h2>
+        <h2 className="text-lg font-semibold text-theme">Categories</h2>
         <button
           type="button"
           className="rounded-full bg-brand-500 px-3 py-1 text-sm font-medium text-white hover:bg-brand-600"
@@ -66,24 +73,27 @@ export default function Sidebar({
           category={{ name: "All", count: categories.reduce((acc, c) => acc + c.count, 0) }}
           isActive={activeCategory === "all"}
           onClick={() => onSelect?.("all")}
-        />
-        <CategoryItem
-          key="pending"
-          category={{ name: "Pending", count: categories.reduce((acc, c) => acc + c.pending, 0) }}
-          isActive={activeCategory === "pending"}
-          onClick={() => onSelect?.("pending")}
-        />
-        {categories.map((category) => (
+        color="var(--highlight-color)"
+      />
+      <CategoryItem
+        key="pending"
+        category={{ name: "Pending", count: categories.reduce((acc, c) => acc + c.pending, 0) }}
+        isActive={activeCategory === "pending"}
+        onClick={() => onSelect?.("pending")}
+        color={DEFAULT_PENDING_COLOR}
+      />
+      {categories.map((category) => (
           <div key={category.id} className="space-y-1">
             <CategoryItem
               category={{ name: category.name, count: category.count }}
               isActive={activeCategory === category.id}
               onClick={() => onSelect?.(category.id)}
+              color={CATEGORY_COLORS[category.name]}
             />
-            <div className="flex gap-2 px-2">
+            <div className="flex gap-2 px-2 text-theme/60">
               <button
                 type="button"
-                className="text-xs text-slate-400 hover:text-brand-500"
+                className="text-xs hover:text-brand-500"
                 onClick={() => {
                   setRenameTarget(category.id);
                   setRenameValue(category.name);
@@ -103,13 +113,13 @@ export default function Sidebar({
         ))}
       </div>
       {showForm && (
-        <form onSubmit={handleSubmit} className="border-t border-slate-200 px-4 py-3">
-          <label className="block text-sm font-medium text-slate-600">
+        <form onSubmit={handleSubmit} className="border-t border-theme px-4 py-3">
+          <label className="block text-sm font-medium text-theme">
             New category
             <input
               value={newCategory}
               onChange={(event) => setNewCategory(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+              className="mt-1 w-full rounded border border-theme px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
               placeholder="e.g. Research"
             />
           </label>
@@ -121,16 +131,16 @@ export default function Sidebar({
         </form>
       )}
       {renameTarget && (
-        <form onSubmit={handleRename} className="border-t border-slate-200 px-4 py-3">
-          <label className="block text-sm font-medium text-slate-600">
+        <form onSubmit={handleRename} className="border-t border-theme px-4 py-3">
+          <label className="block text-sm font-medium text-theme">
             Rename category
             <input
               value={renameValue}
               onChange={(event) => setRenameValue(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+              className="mt-1 w-full rounded border border-theme px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
             />
           </label>
-          <div className="mt-3 flex justify-between text-xs text-slate-400">
+          <div className="mt-3 flex justify-between text-xs text-theme/60">
             <button
               type="button"
               onClick={() => {
