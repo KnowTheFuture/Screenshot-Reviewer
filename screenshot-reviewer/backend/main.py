@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from pathlib import Path
@@ -11,6 +12,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .routes import categories, lexicon, screenshots
+
+def _configure_logging() -> None:
+    """Configure logging once, honoring optional DEBUG and LOG_LEVEL settings."""
+    debug_enabled = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
+    log_level = os.getenv("LOG_LEVEL", "DEBUG" if debug_enabled else "INFO").upper()
+    log_format = os.getenv("LOG_FORMAT", "%(levelname)s [%(name)s] %(message)s")
+
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
+        logging.basicConfig(level=log_level, format=log_format)
+    else:
+        root_logger.setLevel(log_level)
+
+    logging.getLogger("screenshot_reviewer").debug("Logging configured (DEBUG=%s)", debug_enabled)
+
+
+_configure_logging()
 
 SCREENSHOTS_DIR = Path("/Volumes/990_Pro/Screenshots")
 
@@ -51,6 +69,7 @@ if allow_origin_regex:
     cors_kwargs["allow_origin_regex"] = allow_origin_regex
 
 app = FastAPI(title="Screenshot Reviewer API", version="2.0.0")
+app.debug = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
 
 app.add_middleware(CORSMiddleware, **cors_kwargs)
 

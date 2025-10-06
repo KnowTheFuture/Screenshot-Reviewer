@@ -19,6 +19,7 @@ dist/
 # Environment / logs
 .env
 .env.*
+!backend/.env.example
 *.log
 
 # macOS

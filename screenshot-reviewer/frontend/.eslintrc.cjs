@@ -26,5 +26,14 @@ module.exports = {
   },
   rules: {
     "react/prop-types": "off",
+    "react/react-in-jsx-scope": "off",
+  },
+  globals: {
+    vi: "readonly",
+    test: "readonly",
+    expect: "readonly",
+    describe: "readonly",
+    beforeEach: "readonly",
+    afterEach: "readonly",
   },
 };

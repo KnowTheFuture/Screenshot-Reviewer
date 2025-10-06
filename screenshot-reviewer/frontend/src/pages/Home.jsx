@@ -30,7 +30,7 @@ export default function Home() {
   const [activeScreenshot, setActiveScreenshot] = useState(null);
   const [batchCategory, setBatchCategory] = useState("none");
 
-  const { page, setPage, selected, toggle, clear, setSelection, setTriggerSave } = useSelectionStore();
+  const { page, setPage, selected, clear, setSelection, setTriggerSave } = useSelectionStore();
 
   const screenshotsQuery = useQuery({
     queryKey: ["screenshots", { page, filter, search, categoryFilter, groupId }],
@@ -128,11 +128,6 @@ export default function Home() {
     updateMutation.mutate({ id: draft.id, payload: draft });
   };
 
-  const handleSelectAll = () => {
-    if (!screenshots.length) return;
-    setSelection(screenshots.map((item) => item.id));
-  };
-
   const handleGroupNavigate = (offset) => {
     if (!groupMeta.items.length) return;
     let nextIndex = groupMeta.current_index + offset;
@@ -218,9 +213,8 @@ export default function Home() {
         <ScreenshotGrid
           screenshots={screenshots}
           selected={selected}
-          onToggle={(id) => toggle(id)}
+          onSelectionChange={setSelection}
           onOpen={(screenshot) => setActiveScreenshot(screenshot)}
-          onSelectAll={handleSelectAll}
           page={page}
           totalPages={totalPages}
           onPageChange={(value) => {

@@ -21,9 +21,9 @@ class Screenshot(BaseModel):
     id: str
     path: str
     summary: Optional[str] = None
-    tags: list[str] = []
+    tags: List[str] = Field(default_factory=list)
     confidence: Optional[float] = None
-    url: Optional[str] = None
+    url: Optional[str] = Field(default=None)
     primary_category: Optional[str] = None
     status: ScreenshotStatus = ScreenshotStatus.PENDING
     ocr_text: Optional[str] = None
