@@ -34,7 +34,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
 
   const { page, setPage, selected, clear, setSelection, setTriggerSave } = useSelectionStore();
-  useSelectionPersistence(selected, setSelection);
+  const { clearPersistence } = useSelectionPersistence();
 
   const effectiveFilter = categoryFilter === "pending" ? "pending" : filter;
   const categoryParam = categoryFilter === "all" || categoryFilter === "pending" ? undefined : categoryFilter;
@@ -267,7 +267,11 @@ export default function Home() {
         onClose={() => setActiveScreenshot(null)}
         onSave={handleModalSave}
       />
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onClearSelection={clearPersistence}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-const useSelectionStore = create((set, get) => ({
+export const useSelectionStore = create((set, get) => ({
   selected: new Set(),
   page: 1,
   pageSize: 50,

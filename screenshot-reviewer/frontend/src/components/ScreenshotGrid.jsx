@@ -1,4 +1,12 @@
 import clsx from "clsx";
+import { useMemo, useState } from "react";
+
+const normalizeSelection = (value) => {
+  if (!value) return new Set();
+  if (value instanceof Set) return new Set(value);
+  if (Array.isArray(value)) return new Set(value);
+  return new Set([value]);
+};
 
 function ScreenshotCard({ screenshot, isSelected, onClick, onOpen }) {
   const imageSrc = screenshot.thumbnail || screenshot.url || "/placeholder.png";
@@ -42,7 +50,9 @@ function ScreenshotCard({ screenshot, isSelected, onClick, onOpen }) {
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 p-2 text-left text-xs text-white">
         <p className="truncate font-medium">{screenshot.summary || screenshot.path}</p>
-        <p className="text-[10px] opacity-60">Confidence {screenshot.confidence?.toFixed(2)}</p>
+        <p className="text-[10px] opacity-60">
+          Confidence {screenshot.confidence != null ? screenshot.confidence.toFixed(2) : "—"}
+        </p>
       </div>
       <button
         type="button"
@@ -67,28 +77,59 @@ export default function ScreenshotGrid({
   totalPages,
   onPageChange,
 }) {
-  const selectedSet = selected ?? new Set();
+  const isControlled = selected !== undefined;
+  const [internalSelection, setInternalSelection] = useState(() => normalizeSelection(selected));
+
+  const selectionSet = useMemo(
+    () => (isControlled ? normalizeSelection(selected) : internalSelection),
+    [isControlled, internalSelection, selected]
+  );
+
+  const emitSelection = (next) => {
+    const normalized = normalizeSelection(next);
+    if (!isControlled) {
+      setInternalSelection(normalized);
+    }
+    onSelectionChange?.(Array.from(normalized));
+  };
+
+  const toggleSelection = (screenshotId) => {
+    const copy = new Set(selectionSet);
+    if (copy.has(screenshotId)) copy.delete(screenshotId);
+    else copy.add(screenshotId);
+    emitSelection(copy);
+  };
+
+  const selectRange = (anchorIndex, targetIndex) => {
+    const [start, end] =
+      anchorIndex < targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+    const idsInRange = screenshots.slice(start, end + 1).map((item) => item.id);
+    emitSelection(idsInRange);
+  };
 
   const handleClick = (event, screenshotId, index) => {
     if (event.metaKey || event.ctrlKey) {
-      const copy = new Set(selectedSet);
-      if (copy.has(screenshotId)) copy.delete(screenshotId);
-      else copy.add(screenshotId);
-      onSelectionChange?.(Array.from(copy));
+      toggleSelection(screenshotId);
       return;
     }
 
-    if (event.shiftKey && selectedSet.size) {
+    if (event.shiftKey && selectionSet.size) {
       const ids = screenshots.map((item) => item.id);
-      const lastSelected = ids.findIndex((id) => selectedSet.has(id));
-      if (lastSelected >= 0) {
-        const [start, end] = lastSelected < index ? [lastSelected, index] : [index, lastSelected];
-        onSelectionChange?.(ids.slice(start, end + 1));
-        return;
-      }
+      const selectedIndices = ids
+        .map((id, idx) => (selectionSet.has(id) ? idx : -1))
+        .filter((idx) => idx >= 0);
+      const anchorIndex = selectedIndices.length
+        ? selectedIndices[selectedIndices.length - 1]
+        : index;
+      selectRange(anchorIndex, index);
+      return;
     }
 
-    onSelectionChange?.([screenshotId]);
+    emitSelection([screenshotId]);
+  };
+
+  const selectEntirePage = () => {
+    emitSelection(screenshots.map((item) => item.id));
   };
 
   return (
@@ -98,11 +139,11 @@ export default function ScreenshotGrid({
           <button
             type="button"
             className="rounded border border-slate-200 px-3 py-1 hover:border-brand-400 hover:text-brand-600"
-            onClick={() => onSelectionChange?.(screenshots.map((item) => item.id))}
+            onClick={selectEntirePage}
           >
             Select page
           </button>
-          <span>{selectedSet.size} selected</span>
+          <span>{selectionSet.size} selected</span>
         </div>
         <div className="flex items-center gap-3 text-sm text-slate-500">
           <button
@@ -131,7 +172,7 @@ export default function ScreenshotGrid({
           <ScreenshotCard
             key={screenshot.id}
             screenshot={screenshot}
-            isSelected={selectedSet.has(screenshot.id)}
+            isSelected={selectionSet.has(screenshot.id)}
             onClick={(event) => handleClick(event, screenshot.id, index)}
             onOpen={onOpen}
           />

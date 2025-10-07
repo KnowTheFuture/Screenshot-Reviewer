@@ -40,47 +40,31 @@ SCREENSHOTS_DIR = Path("/Volumes/990_Pro/Screenshots")
 LOCALHOST_ORIGIN_REGEX = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$", re.IGNORECASE)
 
 
+async def _handle_exit(sig: signal.Signals | int) -> None:
+    """Handle shutdown signals gracefully and trigger async save."""
+    sig_name = getattr(sig, "name", sig)
+    logger.info("📴 Received %s, saving state", sig_name)
+    await save_selection_state()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Application startup")
     load_selection_state()
+
+    try:
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            try:
+                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(_handle_exit(s)))
+            except NotImplementedError:  # pragma: no cover - platform dependent
+                logger.debug("Signal %s unsupported in this environment", sig)
+    except RuntimeError:  # pragma: no cover - defensive
+        logger.debug("No running event loop available for signal handlers")
+
     yield
     logger.info("🛑 Application shutdown")
     await save_selection_state()
-
-
-def _handle_exit(sig, _frame) -> None:
-    """Handle shutdown signals gracefully and trigger async save."""
-    import signal
-
-    # Resolve signal name safely (works for both enum and int)
-    sig_name = getattr(sig, "name", None)
-    if sig_name is None:
-        try:
-            sig_name = next((n for n, v in signal.__dict__.items() if v == sig), str(sig))
-        except Exception:
-            sig_name = str(sig)
-
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        logger.debug("No running event loop to handle signal %s", sig_name)
-        return
-
-    if loop.is_closed():
-        logger.debug("Event loop already closed; skipping save for %s", sig_name)
-        return
-
-    logger.info("📴 Received signal %s, scheduling state save", sig_name)
-    loop.create_task(save_selection_state())
-
-
-# Register signal handlers if possible (ignored in unsupported environments)
-try:  # pragma: no cover - platform dependent
-    signal.signal(signal.SIGINT, _handle_exit)
-    signal.signal(signal.SIGTERM, _handle_exit)
-except (ValueError, RuntimeError):
-    logger.debug("Signal handlers already registered or unsupported")
 
 
 def _sanitize_origins(raw_value: str) -> list[str]:
@@ -108,7 +92,7 @@ def _build_cors_config() -> tuple[list[str], str | None]:
 def _create_app() -> FastAPI:
     allow_origins, allow_origin_regex = _build_cors_config()
 
-    app_instance = FastAPI(title="Screenshot Reviewer API", version="2.0.0", lifespan=lifespan)
+    app_instance = FastAPI(title="Screenshot Reviewer API", version="2.1.0", lifespan=lifespan)
     app_instance.debug = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
 
     cors_kwargs = dict(

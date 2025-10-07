@@ -1,37 +1,121 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
-export function useSelectionPersistence(selected, setSelection) {
-  // Restore on mount
+import { useSelectionStore } from "@/store/selectionStore.js";
+
+const STORAGE_KEY = "screenshot-selection";
+
+function extractSelected(payload) {
+  if (payload && Array.isArray(payload.selected)) {
+    return payload.selected;
+  }
+  if (payload && payload.state && Array.isArray(payload.state.selected)) {
+    return payload.state.selected;
+  }
+  return [];
+}
+
+export function useSelectionPersistence(options = {}) {
+  const { initialize = true } = options;
+
+  const selected = useSelectionStore((state) => state.selected);
+  const setSelection = useSelectionStore((state) => state.setSelection);
+  const clear = useSelectionStore((state) => state.clear);
+
+  const hydrationCompleteRef = useRef(false);
+
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("selection");
-      if (stored) {
-        const ids = JSON.parse(stored);
-        if (Array.isArray(ids) && setSelection) {
-          setSelection(ids);
+    if (!initialize) {
+      hydrationCompleteRef.current = true;
+      return;
+    }
+
+    if (hydrationCompleteRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const hydrate = async () => {
+      let restored = false;
+
+      if (typeof fetch === "function") {
+        try {
+          const response = await fetch("/api/state");
+          if (!cancelled && response?.ok) {
+            const payload = await response.json();
+            const backendSelected = extractSelected(payload);
+            if (backendSelected.length) {
+              setSelection(backendSelected);
+              console.info("✅ Restored selection from backend");
+              restored = true;
+            }
+          }
+        } catch (error) {
+          if (!cancelled) {
+            console.warn("⚠️ Backend unavailable, falling back to localStorage", error);
+          }
         }
       }
-    } catch (err) {
-      console.warn("⚠️ Failed to restore selection from storage", err);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  useEffect(() => {
-    const saveState = () => {
-      try {
-        localStorage.setItem("selection", JSON.stringify(Array.from(selected || [])));
-      } catch (err) {
-        console.warn("⚠️ Failed to persist selection", err);
+      if (!restored && !cancelled) {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const storedSelection = JSON.parse(raw);
+            if (Array.isArray(storedSelection) && storedSelection.length) {
+              setSelection(storedSelection);
+              console.info("✅ Restored selection from localStorage");
+            }
+          }
+        } catch (error) {
+          console.warn("⚠️ Failed to read selection from localStorage", error);
+        }
+      }
+
+      if (!cancelled) {
+        hydrationCompleteRef.current = true;
       }
     };
 
-    window.addEventListener("beforeunload", saveState);
+    hydrate();
+
     return () => {
-      saveState();
-      window.removeEventListener("beforeunload", saveState);
+      cancelled = true;
     };
+  }, [initialize, setSelection]);
+
+  useEffect(() => {
+    if (!hydrationCompleteRef.current) {
+      return;
+    }
+
+    try {
+      if (selected && selected.size) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(selected)));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.warn("⚠️ Failed to persist selection to localStorage", error);
+    }
   }, [selected]);
+
+  const clearPersistence = useCallback(async () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn("⚠️ Failed to clear persisted selection from localStorage", error);
+    }
+    clear();
+
+    try {
+      await fetch("/api/state/clear", { method: "POST" });
+    } catch (error) {
+      console.warn("⚠️ Failed to notify backend about cleared selection", error);
+    }
+  }, [clear]);
+
+  return { clearPersistence };
 }
 
 export default useSelectionPersistence;
