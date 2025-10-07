@@ -49,17 +49,29 @@ async def lifespan(app: FastAPI):
     await save_selection_state()
 
 
-def _handle_exit(sig: signal.Signals, _frame) -> None:
+def _handle_exit(sig, _frame) -> None:
+    """Handle shutdown signals gracefully and trigger async save."""
+    import signal
+
+    # Resolve signal name safely (works for both enum and int)
+    sig_name = getattr(sig, "name", None)
+    if sig_name is None:
+        try:
+            sig_name = next((n for n, v in signal.__dict__.items() if v == sig), str(sig))
+        except Exception:
+            sig_name = str(sig)
+
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
-        logger.debug("No running event loop to handle signal %s", sig.name)
+        logger.debug("No running event loop to handle signal %s", sig_name)
         return
 
     if loop.is_closed():
+        logger.debug("Event loop already closed; skipping save for %s", sig_name)
         return
 
-    logger.info("📴 Received %s, scheduling state save", sig.name)
+    logger.info("📴 Received signal %s, scheduling state save", sig_name)
     loop.create_task(save_selection_state())
 
 
