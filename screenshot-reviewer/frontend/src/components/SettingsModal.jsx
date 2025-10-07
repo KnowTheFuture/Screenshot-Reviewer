@@ -1,11 +1,11 @@
 import axios from "axios";
-
 import { useSelectionStore } from "../store/selectionStore.js";
 import useLocalSettings from "../hooks/useLocalSettings.js";
+import pkg from "../../package.json";
 
 const STORAGE_KEY = "selection";
 
-export default function SettingsModal({
+function SettingsModal({
   isOpen,
   onClose,
   onClearSelection,
@@ -19,7 +19,9 @@ export default function SettingsModal({
   void themes;
 
   const settings = controlledSettings ?? localSettings;
-  const setSettings = onChangeSettings ?? ((update) => setLocalSettings({ ...settings, ...update }));
+  const setSettings =
+    onChangeSettings ?? ((update) => setLocalSettings({ ...settings, ...update }));
+  const version = (pkg && pkg.version) ? pkg.version : "dev";
 
   if (!isOpen) return null;
 
@@ -53,6 +55,7 @@ export default function SettingsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Settings</h2>
+
         <div className="mt-4 space-y-2">
           <label
             htmlFor="highlight"
@@ -68,6 +71,7 @@ export default function SettingsModal({
             className="h-12 w-full cursor-pointer rounded border border-gray-300"
           />
         </div>
+
         <div className="mt-6 flex flex-col gap-3">
           <button
             type="button"
@@ -83,8 +87,14 @@ export default function SettingsModal({
           >
             Close
           </button>
+
+          <p className="text-sm text-gray-500 mt-2">
+            Version: {version}
+          </p>
         </div>
       </div>
     </div>
   );
 }
+
+export default SettingsModal;
