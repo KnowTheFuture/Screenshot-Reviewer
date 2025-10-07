@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --background-color: #f9fafb;
+  --background-color: #ffffff;
   --surface-color: #ffffff;
-  --text-color: #111827;
-  --border-color: #e5e7eb;
+  --text-color: #000000;
+  --border-color: #cccccc;
   --highlight-color: #ffd700;
 }
 
@@ -14,6 +14,11 @@ body {
   background: var(--background-color);
   color: var(--text-color);
   transition: background 0.2s ease, color 0.2s ease;
+}
+
+.app-shell {
+  background: var(--background-color);
+  color: var(--text-color);
 }
 
 body[data-theme="dark"],
@@ -72,4 +77,3 @@ body[data-theme="matrix"] {
 .screenshot-card.selected {
   border: 4px solid var(--highlight-color, #FFD700);
 }
-

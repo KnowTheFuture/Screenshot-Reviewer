@@ -20,6 +20,8 @@ import LexiconPanel from "../components/LexiconPanel.jsx";
 import SettingsModal from "../components/SettingsModal.jsx";
 import useSelectionStore from "../store/selectionStore.js";
 import useSelectionPersistence from "../hooks/useSelectionPersistence.js";
+import useLocalSettings from "../hooks/useLocalSettings.js";
+import themes from "../themes.json";
 
 const PAGE_SIZE = 50;
 
@@ -35,6 +37,7 @@ export default function Home() {
 
   const { page, setPage, selected, clear, setSelection, setTriggerSave } = useSelectionStore();
   const { clearPersistence } = useSelectionPersistence();
+  const [settings] = useLocalSettings();
 
   const effectiveFilter = categoryFilter === "pending" ? "pending" : filter;
   const categoryParam = categoryFilter === "all" || categoryFilter === "pending" ? undefined : categoryFilter;
@@ -107,18 +110,14 @@ export default function Home() {
     setTriggerSave(() => () => {});
   }, [setTriggerSave]);
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("appSettings");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.highlightColor) {
-          document.documentElement.style.setProperty("--highlight-color", parsed.highlightColor);
-        }
-      }
-    } catch (_error) {
-      document.documentElement.style.setProperty("--highlight-color", "#FFD700");
-    }
-  }, []);
+    const theme = themes[settings.themeName] || themes.light;
+    if (!theme) return;
+    Object.entries(theme).forEach(([key, value]) => {
+      document.documentElement.style.setProperty(`--${key}-color`, value);
+    });
+    document.documentElement.style.setProperty("--highlight-color", settings.highlightColor);
+    document.body.dataset.theme = settings.themeName;
+  }, [settings.themeName, settings.highlightColor]);
 
   const categoryList = useMemo(
     () =>
@@ -168,7 +167,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative flex h-screen w-screen overflow-hidden bg-slate-100 text-gray-900">
+    <div className="app-shell relative flex h-screen w-screen overflow-hidden">
       <button
         type="button"
         className="absolute right-4 top-4 rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
@@ -250,6 +249,7 @@ export default function Home() {
             setPage(value);
             clear();
           }}
+          categoryFilter={categoryFilter}
         />
         {screenshots.length === 0 && (
           <div className="mt-8 text-center text-gray-500">{emptyMessage}</div>

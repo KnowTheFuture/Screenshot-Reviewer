@@ -1,9 +1,11 @@
 import axios from "axios";
-import { useSelectionStore } from "../store/selectionStore.js";
+
 import useLocalSettings from "../hooks/useLocalSettings.js";
+import { useSelectionStore } from "../store/selectionStore.js";
+import themes from "../themes.json";
 import pkg from "../../package.json";
 
-const STORAGE_KEY = "selection";
+const LEGACY_KEYS = ["selection", "screenshot-selection"];
 
 function SettingsModal({
   isOpen,
@@ -11,17 +13,13 @@ function SettingsModal({
   onClearSelection,
   settings: controlledSettings,
   onChangeSettings,
-  themes,
 }) {
   const [localSettings, setLocalSettings] = useLocalSettings();
   const clearSelection = useSelectionStore((state) => state.clear);
 
-  void themes;
-
   const settings = controlledSettings ?? localSettings;
-  const setSettings =
-    onChangeSettings ?? ((update) => setLocalSettings({ ...settings, ...update }));
-  const version = (pkg && pkg.version) ? pkg.version : "dev";
+  const setSettings = onChangeSettings ?? ((update) => setLocalSettings(update));
+  const version = pkg?.version ?? "dev";
 
   if (!isOpen) return null;
 
@@ -36,8 +34,7 @@ function SettingsModal({
     }
 
     try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem("screenshot-selection");
+      LEGACY_KEYS.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
       console.warn("⚠️ Failed to clear selection from localStorage", error);
     }
@@ -53,13 +50,13 @@ function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Settings</h2>
+      <div className="w-full max-w-sm rounded-lg settings-surface border border-theme p-6 shadow-lg">
+        <h2 className="text-lg font-bold text-theme">Settings</h2>
 
         <div className="mt-4 space-y-2">
           <label
             htmlFor="highlight"
-            className="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+            className="block text-sm font-semibold text-theme"
           >
             Selection Highlight
           </label>
@@ -68,8 +65,27 @@ function SettingsModal({
             type="color"
             value={settings.highlightColor}
             onChange={handleColorChange}
-            className="h-12 w-full cursor-pointer rounded border border-gray-300"
+            className="h-12 w-full cursor-pointer rounded border border-theme"
           />
+
+          <label
+            htmlFor="theme"
+            className="block text-sm font-semibold text-theme"
+          >
+            Theme
+          </label>
+          <select
+            id="theme"
+            value={settings.themeName}
+            onChange={(event) => setSettings({ themeName: event.target.value })}
+            className="w-full rounded border border-theme p-2 text-sm capitalize"
+          >
+            {Object.keys(themes).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mt-6 flex flex-col gap-3">

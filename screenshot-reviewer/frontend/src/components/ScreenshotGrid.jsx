@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import { useMemo, useState } from "react";
 
+import { CATEGORY_COLORS } from "../constants/categoryColors.js";
+
 const normalizeSelection = (value) => {
   if (!value) return new Set();
   if (value instanceof Set) return new Set(value);
@@ -8,7 +10,7 @@ const normalizeSelection = (value) => {
   return new Set([value]);
 };
 
-function ScreenshotCard({ screenshot, isSelected, onClick, onOpen }) {
+function ScreenshotCard({ screenshot, isSelected, onClick, onOpen, tintStyle, categoryKey }) {
   const imageSrc = screenshot.thumbnail || screenshot.url || "/placeholder.png";
   return (
     <div
@@ -21,9 +23,14 @@ function ScreenshotCard({ screenshot, isSelected, onClick, onOpen }) {
           onClick(event);
         }
       }}
+      data-category={categoryKey || undefined}
+      style={tintStyle}
       className={clsx(
         "screenshot-card group relative aspect-square w-full cursor-pointer overflow-hidden rounded-xl border transition",
-        { selected: isSelected }
+        {
+          selected: isSelected,
+          tinted: Boolean(tintStyle),
+        }
       )}
     >
       <img
@@ -76,6 +83,7 @@ export default function ScreenshotGrid({
   page,
   totalPages,
   onPageChange,
+  categoryFilter = "all",
 }) {
   const isControlled = selected !== undefined;
   const [internalSelection, setInternalSelection] = useState(() => normalizeSelection(selected));
@@ -168,15 +176,25 @@ export default function ScreenshotGrid({
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4 px-6 pb-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {screenshots.map((screenshot, index) => (
-          <ScreenshotCard
-            key={screenshot.id}
-            screenshot={screenshot}
-            isSelected={selectionSet.has(screenshot.id)}
-            onClick={(event) => handleClick(event, screenshot.id, index)}
-            onOpen={onOpen}
-          />
-        ))}
+        {screenshots.map((screenshot, index) => {
+          const categoryKey = screenshot.primary_category ?? screenshot.category ?? "default";
+          const categoryColor = CATEGORY_COLORS[categoryKey] ?? CATEGORY_COLORS.default;
+          const tintStyle = categoryFilter === "all"
+            ? { boxShadow: `0 0 6px ${categoryColor}`, "--category-color": categoryColor }
+            : undefined;
+
+          return (
+            <ScreenshotCard
+              key={screenshot.id}
+              screenshot={screenshot}
+              isSelected={selectionSet.has(screenshot.id)}
+              onClick={(event) => handleClick(event, screenshot.id, index)}
+              onOpen={onOpen}
+              tintStyle={tintStyle}
+              categoryKey={categoryFilter === "all" ? categoryKey : undefined}
+            />
+          );
+        })}
       </div>
     </section>
   );
