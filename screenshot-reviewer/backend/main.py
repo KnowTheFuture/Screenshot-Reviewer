@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import re
@@ -16,9 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .routes import categories, lexicon, screenshots, state
-
-STATE_FILE = Path(__file__).resolve().parent / "selection_state.json"
-current_state: dict = {}
+from .state_manager import load_selection_state, save_selection_state
 
 
 def _configure_logging() -> None:
@@ -41,28 +38,6 @@ logger = logging.getLogger("screenshot_reviewer")
 
 SCREENSHOTS_DIR = Path("/Volumes/990_Pro/Screenshots")
 LOCALHOST_ORIGIN_REGEX = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$", re.IGNORECASE)
-
-
-def load_selection_state() -> None:
-    if STATE_FILE.exists():
-        try:
-            data = json.loads(STATE_FILE.read_text())
-            current_state.clear()
-            current_state.update(data)
-            logger.info("🔄 Restored selection state from %s", STATE_FILE)
-        except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("⚠️ Failed to restore selection state: %s", exc)
-    else:
-        logger.debug("No existing selection state file found at %s", STATE_FILE)
-
-
-async def save_selection_state() -> None:
-    try:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps(current_state))
-        logger.info("💾 Selection state saved to %s", STATE_FILE)
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.error("❌ Failed to save selection state: %s", exc)
 
 
 @asynccontextmanager
