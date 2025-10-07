@@ -52,6 +52,12 @@ class BatchUpdateRequest(BaseModel):
     payload: ScreenshotUpdate
 
 
+class ReclassifyRequest(BaseModel):
+    ids: List[str]
+    new_category: Optional[str] = None
+    status: ScreenshotStatus = ScreenshotStatus.PENDING
+
+
 class Category(BaseModel):
     id: str
     name: str

@@ -2,6 +2,7 @@ import { useState } from "react";
 import clsx from "clsx";
 
 import { CATEGORY_COLORS } from "../constants/categoryColors.js";
+import useCategoryColorStore from "../store/categoryColorStore.js";
 
 const DEFAULT_PENDING_COLOR = "#F97316";
 
@@ -34,10 +35,12 @@ export default function Sidebar({
   onDelete,
   onRename,
 }) {
+  const colors = useCategoryColorStore((state) => state.colors);
   const [showForm, setShowForm] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameValue, setRenameValue] = useState("");
+  const [renameOriginalName, setRenameOriginalName] = useState("");
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -50,9 +53,10 @@ export default function Sidebar({
   const handleRename = (event) => {
     event.preventDefault();
     if (!renameTarget || !renameValue.trim()) return;
-    onRename?.(renameTarget, renameValue.trim());
+    onRename?.(renameTarget, renameValue.trim(), renameOriginalName);
     setRenameValue("");
     setRenameTarget(null);
+    setRenameOriginalName("");
   };
 
   return (
@@ -73,22 +77,22 @@ export default function Sidebar({
           category={{ name: "All", count: categories.reduce((acc, c) => acc + c.count, 0) }}
           isActive={activeCategory === "all"}
           onClick={() => onSelect?.("all")}
-        color="var(--highlight-color)"
-      />
-      <CategoryItem
-        key="pending"
-        category={{ name: "Pending", count: categories.reduce((acc, c) => acc + c.pending, 0) }}
-        isActive={activeCategory === "pending"}
-        onClick={() => onSelect?.("pending")}
-        color={DEFAULT_PENDING_COLOR}
-      />
-      {categories.map((category) => (
+          color="var(--highlight-color)"
+        />
+        <CategoryItem
+          key="pending"
+          category={{ name: "Pending", count: categories.reduce((acc, c) => acc + c.pending, 0) }}
+          isActive={activeCategory === "pending"}
+          onClick={() => onSelect?.("pending")}
+          color={DEFAULT_PENDING_COLOR}
+        />
+        {categories.map((category) => (
           <div key={category.id} className="space-y-1">
             <CategoryItem
               category={{ name: category.name, count: category.count }}
               isActive={activeCategory === category.id}
               onClick={() => onSelect?.(category.id)}
-              color={CATEGORY_COLORS[category.name]}
+              color={colors[category.name] ?? CATEGORY_COLORS[category.name] ?? CATEGORY_COLORS.default}
             />
             <div className="flex gap-2 px-2 text-theme/60">
               <button
@@ -97,6 +101,7 @@ export default function Sidebar({
                 onClick={() => {
                   setRenameTarget(category.id);
                   setRenameValue(category.name);
+                  setRenameOriginalName(category.name);
                 }}
               >
                 Rename
@@ -104,7 +109,7 @@ export default function Sidebar({
               <button
                 type="button"
                 className="text-xs text-red-400 hover:text-red-500"
-                onClick={() => onDelete?.(category.id)}
+                onClick={() => onDelete?.(category.id, category.name)}
               >
                 Delete
               </button>
@@ -146,6 +151,7 @@ export default function Sidebar({
               onClick={() => {
                 setRenameTarget(null);
                 setRenameValue("");
+                setRenameOriginalName("");
               }}
             >
               Cancel

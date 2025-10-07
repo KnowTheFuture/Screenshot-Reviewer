@@ -2,6 +2,9 @@ export const CATEGORY_COLORS = {
   coding: "#d0ebff",
   design: "#ffe5d9",
   misc: "#e9ecef",
+  General: "#f4f5f7",
+  Important: "#fde68a",
+  "To Review": "#c4b5fd",
   default: "#f1f3f5",
 };
 

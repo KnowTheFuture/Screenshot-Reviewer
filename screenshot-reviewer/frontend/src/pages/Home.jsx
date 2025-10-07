@@ -20,8 +20,8 @@ import LexiconPanel from "../components/LexiconPanel.jsx";
 import SettingsModal from "../components/SettingsModal.jsx";
 import useSelectionStore from "../store/selectionStore.js";
 import useSelectionPersistence from "../hooks/useSelectionPersistence.js";
-import useLocalSettings from "../hooks/useLocalSettings.js";
-import themes from "../themes.json";
+import useSelectionActions from "../hooks/useSelectionActions.js";
+import useCategoryColorStore from "../store/categoryColorStore.js";
 
 const PAGE_SIZE = 50;
 
@@ -37,7 +37,10 @@ export default function Home() {
 
   const { page, setPage, selected, clear, setSelection, setTriggerSave } = useSelectionStore();
   const { clearPersistence } = useSelectionPersistence();
-  const [settings] = useLocalSettings();
+  const { markAsPending, isReclassifying } = useSelectionActions();
+  const ensureCategoryColor = useCategoryColorStore((state) => state.ensureColor);
+  const renameCategoryColor = useCategoryColorStore((state) => state.renameCategoryColor);
+  const removeCategoryColor = useCategoryColorStore((state) => state.removeColor);
 
   const effectiveFilter = categoryFilter === "pending" ? "pending" : filter;
   const categoryParam = categoryFilter === "all" || categoryFilter === "pending" ? undefined : categoryFilter;
@@ -78,17 +81,34 @@ export default function Home() {
 
   const createCategoryMutation = useMutation({
     mutationFn: (name) => createCategory({ name }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["categories"] }),
+    onSuccess: (data, name) => {
+      if (data?.name) {
+        ensureCategoryColor(data.name);
+      } else if (typeof name === "string") {
+        ensureCategoryColor(name);
+      }
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: (id) => deleteCategory(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["categories"] }),
+    mutationFn: ({ id }) => deleteCategory(id),
+    onSuccess: (_data, variables) => {
+      if (variables?.name) {
+        removeCategoryColor(variables.name);
+      }
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
   });
 
   const renameCategoryMutation = useMutation({
     mutationFn: ({ id, name }) => updateCategory(id, { name }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["categories"] }),
+    onSuccess: (data, variables) => {
+      if (variables?.previousName || variables?.name) {
+        renameCategoryColor(variables.previousName ?? variables.name, data?.name ?? variables.name);
+      }
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
   });
 
   const createLexiconMutation = useMutation({
@@ -109,15 +129,11 @@ export default function Home() {
   useEffect(() => {
     setTriggerSave(() => () => {});
   }, [setTriggerSave]);
+
   useEffect(() => {
-    const theme = themes[settings.themeName] || themes.light;
-    if (!theme) return;
-    Object.entries(theme).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(`--${key}-color`, value);
-    });
-    document.documentElement.style.setProperty("--highlight-color", settings.highlightColor);
-    document.body.dataset.theme = settings.themeName;
-  }, [settings.themeName, settings.highlightColor]);
+    if (!Array.isArray(categoriesQuery.data)) return;
+    categoriesQuery.data.forEach((category) => ensureCategoryColor(category.name));
+  }, [categoriesQuery.data, ensureCategoryColor]);
 
   const categoryList = useMemo(() => {
     const raw = categoriesQuery.data;
@@ -154,6 +170,19 @@ export default function Home() {
     });
   };
 
+  const handleMarkPending = () => {
+    if (!selected.size) return;
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    const shouldProceed = window.confirm("Move selected screenshots back to Pending?");
+    if (!shouldProceed) return;
+    markAsPending(ids, {
+      onSuccess: () => {
+        clear();
+      },
+    });
+  };
+
   const handleModalSave = (draft) => {
     setActiveScreenshot(null);
     updateMutation.mutate({ id: draft.id, payload: draft });
@@ -186,8 +215,8 @@ export default function Home() {
           setPage(1);
         }}
         onCreate={(name) => createCategoryMutation.mutate(name)}
-        onDelete={(id) => deleteCategoryMutation.mutate(id)}
-        onRename={(id, name) => renameCategoryMutation.mutate({ id, name })}
+        onDelete={(id, name) => deleteCategoryMutation.mutate({ id, name })}
+        onRename={(id, name, previousName) => renameCategoryMutation.mutate({ id, name, previousName })}
       />
       <main className="flex min-w-0 flex-1 flex-col">
         <Toolbar
@@ -238,6 +267,14 @@ export default function Home() {
             >
               Mark for deletion
             </button>
+            <button
+              type="button"
+              className="rounded border border-amber-300 px-3 py-2 text-sm text-amber-600 hover:border-amber-400 hover:text-amber-700 disabled:opacity-40"
+              disabled={!selected.size || isReclassifying}
+              onClick={handleMarkPending}
+            >
+              Mark as Pending
+            </button>
           </div>
           <span className="text-slate-500">{selected.size} selected</span>
         </div>
@@ -274,6 +311,7 @@ export default function Home() {
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         onClearSelection={clearPersistence}
+        categories={categoryList}
       />
     </div>
   );

@@ -26,3 +26,18 @@ def test_state_route_get_and_clear(tmp_path, monkeypatch):
         persisted = json.loads(state_file.read_text())
         assert persisted["selected"] == []
         assert persisted["timestamp"] is None
+
+
+def test_state_save_endpoint(tmp_path, monkeypatch):
+    state_file = tmp_path / "state.json"
+    monkeypatch.setattr(state_manager, "STATE_FILE", state_file)
+    state_manager.set_current_state({"selected": [], "timestamp": None})
+
+    with TestClient(main.app) as client:
+        response = client.post("/api/state/save", json={"selected": ["alpha"], "timestamp": "now"})
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["state"]["selected"] == ["alpha"]
+        assert state_file.exists()
+        saved = json.loads(state_file.read_text())
+        assert saved["selected"] == ["alpha"]

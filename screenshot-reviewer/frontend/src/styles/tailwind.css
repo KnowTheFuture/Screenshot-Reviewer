@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background-color: #ffffff;
+  --bg-color: #ffffff;
   --surface-color: #ffffff;
   --text-color: #000000;
   --border-color: #cccccc;
@@ -11,13 +11,13 @@
 }
 
 body {
-  background: var(--background-color);
+  background: var(--bg-color);
   color: var(--text-color);
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .app-shell {
-  background: var(--background-color);
+  background: var(--bg-color);
   color: var(--text-color);
 }
 

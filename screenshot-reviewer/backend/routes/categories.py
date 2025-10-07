@@ -44,10 +44,10 @@ def list_categories():
         categories = load_categories()
         if not isinstance(categories, list):
             logger.warning("Unexpected categories payload %s; returning fallback catalogue", type(categories))
-            return _annotate_counts(FALLBACK_CATEGORIES.copy())
+            return _annotate_counts([dict(cat) for cat in FALLBACK_CATEGORIES])
         if not categories:
             logger.info("No categories found on disk, using fallback defaults")
-            return _annotate_counts(FALLBACK_CATEGORIES.copy())
+            return _annotate_counts([dict(cat) for cat in FALLBACK_CATEGORIES])
         return _annotate_counts(categories)
     except HTTPException:
         raise

@@ -5,14 +5,7 @@ import SettingsModal from "../components/SettingsModal.jsx";
 
 vi.mock("axios");
 
-const THEMES = {
-  light: { name: "Light" },
-  dark: { name: "Dark" },
-  matrix: { name: "Matrix" },
-};
-
 const BASE_SETTINGS = Object.freeze({
-  theme: "light",
   highlightColor: "#FFD700",
 });
 
@@ -34,8 +27,8 @@ describe("SettingsModal", () => {
         isOpen
         onClose={() => {}}
         settings={settings}
-        themes={THEMES}
         onChangeSettings={handleChange}
+        categories={[]}
       />
     );
 
@@ -54,8 +47,8 @@ describe("SettingsModal", () => {
         isOpen
         onClose={() => {}}
         settings={{ ...BASE_SETTINGS }}
-        themes={THEMES}
         onChangeSettings={() => {}}
+        categories={[]}
       />
     );
 

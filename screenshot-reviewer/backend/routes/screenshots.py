@@ -20,6 +20,7 @@ from ..models import (
     ScreenshotFilter,
     ScreenshotStatus,
     ScreenshotUpdate,
+    ReclassifyRequest,
 )
 from ..storage import load_lexicon, load_screenshots, save_screenshots
 
@@ -308,4 +309,41 @@ def batch_update(batch_request: BatchUpdateRequest):
         raise
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Error in batch_update")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/reclassify", response_model=dict)
+def reclassify_screenshots(payload: ReclassifyRequest):
+    try:
+        dataset = load_screenshots()
+        target_ids = {identifier for identifier in payload.ids if identifier}
+        if not target_ids:
+            return {"status": "ok", "updated": 0}
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        updated = 0
+        new_status = (
+            payload.status.value
+            if isinstance(payload.status, ScreenshotStatus)
+            else str(payload.status or ScreenshotStatus.PENDING.value)
+        )
+        desired_category = (payload.new_category or "").strip()
+        clear_category = not desired_category or desired_category.lower() == ScreenshotStatus.PENDING.value
+
+        for item in dataset:
+            if item.get("id") in target_ids:
+                item["primary_category"] = None if clear_category else desired_category
+                item["status"] = new_status
+                item["updated_at"] = timestamp
+                updated += 1
+
+        if not updated:
+            raise HTTPException(status_code=404, detail="No screenshots reclassified")
+
+        save_screenshots(dataset)
+        return {"status": "ok", "updated": updated}
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("Error in reclassify_screenshots")
         raise HTTPException(status_code=500, detail=str(exc))

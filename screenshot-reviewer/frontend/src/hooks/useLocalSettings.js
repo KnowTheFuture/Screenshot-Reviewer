@@ -5,7 +5,6 @@ const SETTINGS_EVENT = "app-settings:changed";
 
 const DEFAULT_SETTINGS = {
   highlightColor: "#FFD700",
-  themeName: "light",
 };
 
 const loadSettings = () => {

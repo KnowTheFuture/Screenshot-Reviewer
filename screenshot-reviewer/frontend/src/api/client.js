@@ -83,4 +83,9 @@ export const deleteLexiconEntry = async (id) => {
   return data;
 };
 
+export const reclassifyScreenshots = async (payload) => {
+  const { data } = await api.post("/screenshots/reclassify", payload);
+  return data;
+};
+
 export default api;

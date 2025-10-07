@@ -89,14 +89,29 @@ export function useSelectionPersistence(options = {}) {
       return;
     }
 
+    const selectionArray = Array.from(selected || []);
     try {
-      if (selected && selected.size) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(selected)));
+      if (selectionArray.length) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(selectionArray));
       } else {
         localStorage.removeItem(STORAGE_KEY);
       }
     } catch (error) {
       console.warn("⚠️ Failed to persist selection to localStorage", error);
+    }
+
+    if (typeof fetch === "function") {
+      const payload = {
+        selected: selectionArray,
+        timestamp: new Date().toISOString(),
+      };
+      fetch("/api/state/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch((error) => {
+        console.warn("⚠️ Failed to persist selection to backend", error);
+      });
     }
   }, [selected]);
 

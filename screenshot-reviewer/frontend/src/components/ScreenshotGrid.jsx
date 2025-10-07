@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 
 import { CATEGORY_COLORS } from "../constants/categoryColors.js";
+import useCategoryColorStore from "../store/categoryColorStore.js";
 
 const normalizeSelection = (value) => {
   if (!value) return new Set();
@@ -85,6 +86,7 @@ export default function ScreenshotGrid({
   onPageChange,
   categoryFilter = "all",
 }) {
+  const categoryColors = useCategoryColorStore((state) => state.colors);
   const isControlled = selected !== undefined;
   const [internalSelection, setInternalSelection] = useState(() => normalizeSelection(selected));
 
@@ -178,10 +180,14 @@ export default function ScreenshotGrid({
       <div className="grid grid-cols-2 gap-4 px-6 pb-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {screenshots.map((screenshot, index) => {
           const categoryKey = screenshot.primary_category ?? screenshot.category ?? "default";
-          const categoryColor = CATEGORY_COLORS[categoryKey] ?? CATEGORY_COLORS.default;
-          const tintStyle = categoryFilter === "all"
-            ? { boxShadow: `0 0 6px ${categoryColor}`, "--category-color": categoryColor }
-            : undefined;
+          const categoryColor =
+            categoryColors[categoryKey] ??
+            CATEGORY_COLORS[categoryKey] ??
+            CATEGORY_COLORS.default;
+          const tintStyle =
+            categoryFilter === "all"
+              ? { boxShadow: `0 0 6px ${categoryColor}`, "--category-color": categoryColor }
+              : undefined;
 
           return (
             <ScreenshotCard
