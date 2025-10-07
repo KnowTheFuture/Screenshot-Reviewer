@@ -2,12 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root, [data-theme="light"] {
   --bg-color: #ffffff;
-  --surface-color: #ffffff;
   --text-color: #000000;
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --surface-color: #ffffff;
   --border-color: #cccccc;
   --highlight-color: #ffd700;
+}
+
+[data-theme="dark"] {
+  --bg-color: #121212;
+  --text-color: #ffffff;
+  --primary-color: #bb86fc;
+  --secondary-color: #03dac6;
+  --surface-color: #1e1e1e;
+  --border-color: #444444;
+}
+
+[data-theme="matrix"] {
+  --bg-color: #0D0208;
+  --text-color: #00FF41;
+  --primary-color: #008F11;
+  --secondary-color: #003B00;
+  --surface-color: #0D0208;
+  --border-color: #008F11;
 }
 
 body {
@@ -19,11 +39,6 @@ body {
 .app-shell {
   background: var(--bg-color);
   color: var(--text-color);
-}
-
-body[data-theme="dark"],
-body[data-theme="matrix"] {
-  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .screenshot-card {

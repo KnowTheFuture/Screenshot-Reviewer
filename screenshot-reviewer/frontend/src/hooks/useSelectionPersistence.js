@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from "react";
-
 import { useSelectionStore } from "@/store/selectionStore.js";
 
 const STORAGE_KEY = "screenshot-selection";
@@ -24,12 +23,7 @@ export function useSelectionPersistence(options = {}) {
   const hydrationCompleteRef = useRef(false);
 
   useEffect(() => {
-    if (!initialize) {
-      hydrationCompleteRef.current = true;
-      return;
-    }
-
-    if (hydrationCompleteRef.current) {
+    if (!initialize || hydrationCompleteRef.current) {
       return;
     }
 
@@ -37,7 +31,6 @@ export function useSelectionPersistence(options = {}) {
 
     const hydrate = async () => {
       let restored = false;
-
       if (typeof fetch === "function") {
         try {
           const response = await fetch("/api/state");
@@ -100,7 +93,11 @@ export function useSelectionPersistence(options = {}) {
       console.warn("⚠️ Failed to persist selection to localStorage", error);
     }
 
-    if (typeof fetch === "function") {
+    if (typeof fetch !== "function") {
+      return;
+    }
+
+    if (selectionArray.length > 0) {
       const payload = {
         selected: selectionArray,
         timestamp: new Date().toISOString(),
@@ -112,22 +109,20 @@ export function useSelectionPersistence(options = {}) {
       }).catch((error) => {
         console.warn("⚠️ Failed to persist selection to backend", error);
       });
+    } else {
+      fetch("/api/state/clear", { method: "POST" }).catch((error) => {
+        console.warn("⚠️ Failed to notify backend about cleared selection", error);
+      });
     }
   }, [selected]);
 
-  const clearPersistence = useCallback(async () => {
+  const clearPersistence = useCallback(() => {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.warn("⚠️ Failed to clear persisted selection from localStorage", error);
     }
     clear();
-
-    try {
-      await fetch("/api/state/clear", { method: "POST" });
-    } catch (error) {
-      console.warn("⚠️ Failed to notify backend about cleared selection", error);
-    }
   }, [clear]);
 
   return { clearPersistence };

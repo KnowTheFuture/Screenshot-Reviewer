@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-
 import rawThemeConfig from "../themes.json";
 
 const STORAGE_KEY = "app-theme";
@@ -20,12 +19,7 @@ const themeVariables = Object.entries(rawThemeConfig).reduce((acc, [name, config
   return acc;
 }, {});
 
-let currentTheme = DEFAULT_THEME;
 const subscribers = new Set();
-
-const notifySubscribers = () => {
-  subscribers.forEach((callback) => callback());
-};
 
 const applyThemeVariables = (themeName) => {
   if (typeof document === "undefined") {
@@ -38,7 +32,7 @@ const applyThemeVariables = (themeName) => {
   document.body.dataset.theme = themeName;
 };
 
-const loadInitialTheme = () => {
+const getTheme = () => {
   if (typeof window === "undefined") {
     return DEFAULT_THEME;
   }
@@ -49,41 +43,45 @@ const loadInitialTheme = () => {
   return DEFAULT_THEME;
 };
 
+// Apply theme on initial load for non-React parts of the app, and to avoid FOUC.
 if (typeof window !== "undefined") {
-  currentTheme = loadInitialTheme();
-  applyThemeVariables(currentTheme);
-}
-
-if (typeof window !== "undefined") {
-  window.addEventListener("storage", (event) => {
-    if (event.key !== STORAGE_KEY) return;
-    const nextName = event.newValue && themeVariables[event.newValue] ? event.newValue : DEFAULT_THEME;
-    if (nextName === currentTheme) return;
-    currentTheme = nextName;
-    applyThemeVariables(currentTheme);
-    notifySubscribers();
-  });
+  applyThemeVariables(getTheme());
 }
 
 const setTheme = (themeName) => {
   const next = themeVariables[themeName] ? themeName : DEFAULT_THEME;
-  currentTheme = next;
   if (typeof window !== "undefined") {
     window.localStorage.setItem(STORAGE_KEY, next);
   }
   applyThemeVariables(next);
-  notifySubscribers();
+  subscribers.forEach((callback) => callback());
 };
 
 const subscribe = (callback) => {
   subscribers.add(callback);
+
+  const handleStorageChange = (event) => {
+    if (event.key === STORAGE_KEY) {
+      const newTheme = getTheme();
+      applyThemeVariables(newTheme);
+      subscribers.forEach((cb) => cb());
+    }
+  };
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", handleStorageChange);
+  }
+
   return () => {
     subscribers.delete(callback);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", handleStorageChange);
+    }
   };
 };
 
 export function useTheme() {
-  const theme = useSyncExternalStore(subscribe, () => currentTheme, () => currentTheme);
+  const theme = useSyncExternalStore(subscribe, getTheme, () => DEFAULT_THEME);
 
   const themeNames = useMemo(() => Object.keys(themeVariables), []);
 

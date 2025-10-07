@@ -75,3 +75,56 @@ def test_categories_endpoint():
     response = client.get("/api/categories")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_reclassify_screenshots(monkeypatch):
+    initial_screenshots = [
+        {"id": "1", "primary_category": "old_cat", "status": "reviewed"},
+        {"id": "2", "primary_category": "old_cat", "status": "reviewed"},
+        {"id": "3", "primary_category": "other_cat", "status": "reviewed"},
+    ]
+    saved_data = None
+
+    def fake_load():
+        return [s.copy() for s in initial_screenshots]
+
+    def fake_save(data):
+        nonlocal saved_data
+        saved_data = data
+
+    monkeypatch.setattr(screenshots, "load_screenshots", fake_load)
+    monkeypatch.setattr(screenshots, "save_screenshots", fake_save)
+
+    # Test reclassifying to a new category
+    response = client.post(
+        "/api/screenshots/reclassify",
+        json={"ids": ["1", "2"], "new_category": "new_cat"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["updated"] == 2
+    assert saved_data is not None
+
+    updated_count = 0
+    for item in saved_data:
+        if item["id"] in ["1", "2"]:
+            assert item["primary_category"] == "new_cat"
+            assert item["status"] == "pending"
+            updated_count += 1
+        else:
+            assert item["primary_category"] == "other_cat"
+    assert updated_count == 2
+
+    # Test reclassifying to "Pending"
+    response = client.post(
+        "/api/screenshots/reclassify",
+        json={"ids": ["3"], "new_category": "pending"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["updated"] == 1
+
+    pending_item = next((item for item in saved_data if item["id"] == "3"), None)
+    assert pending_item is not None
+    assert pending_item["primary_category"] is None
+    assert pending_item["status"] == "pending"
