@@ -5,8 +5,6 @@ import useTheme from "../hooks/useTheme.js";
 import useCategoryColorStore from "../store/categoryColorStore.js";
 import { CATEGORY_COLORS } from "../constants/categoryColors.js";
 import useSelectionStore from "../store/selectionStore.js";
-import pkg from "../../package.json";
-
 const LEGACY_KEYS = ["selection", "screenshot-selection"];
 
 function SettingsModal({
@@ -26,7 +24,7 @@ function SettingsModal({
 
   const settings = controlledSettings ?? localSettings;
   const setSettings = onChangeSettings ?? ((update) => setLocalSettings(update));
-  const version = pkg?.version ?? "dev";
+  const version = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 
   if (!isOpen) return null;
 

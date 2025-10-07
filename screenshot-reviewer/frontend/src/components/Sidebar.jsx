@@ -36,6 +36,7 @@ export default function Sidebar({
   onRename,
 }) {
   const colors = useCategoryColorStore((state) => state.colors);
+  const setColor = useCategoryColorStore((state) => state.setColor);
   const [showForm, setShowForm] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [renameTarget, setRenameTarget] = useState(null);
@@ -94,7 +95,16 @@ export default function Sidebar({
               onClick={() => onSelect?.(category.id)}
               color={colors[category.name] ?? CATEGORY_COLORS[category.name] ?? CATEGORY_COLORS.default}
             />
-            <div className="flex gap-2 px-2 text-theme/60">
+            <div className="flex items-center gap-2 px-2 text-theme/60">
+              <input
+                type="color"
+                value={
+                  colors[category.name] ?? CATEGORY_COLORS[category.name] ?? CATEGORY_COLORS.default
+                }
+                onChange={(event) => setColor(category.name, event.target.value)}
+                className="h-5 w-5 cursor-pointer rounded border-none bg-transparent p-0"
+                title={`Set ${category.name} tint`}
+              />
               <button
                 type="button"
                 className="text-xs hover:text-brand-500"
