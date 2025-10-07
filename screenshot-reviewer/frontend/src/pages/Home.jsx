@@ -119,15 +119,18 @@ export default function Home() {
     document.body.dataset.theme = settings.themeName;
   }, [settings.themeName, settings.highlightColor]);
 
-  const categoryList = useMemo(
-    () =>
-      (categoriesQuery.data ?? []).map((cat) => ({
-        ...cat,
-        count: cat.count ?? 0,
-        pending: cat.pending ?? 0,
-      })),
-    [categoriesQuery.data]
-  );
+  const categoryList = useMemo(() => {
+    const raw = categoriesQuery.data;
+    if (raw !== undefined && !Array.isArray(raw)) {
+      console.warn("⚠️ Unexpected categories response:", raw);
+      return [];
+    }
+    return (Array.isArray(raw) ? raw : []).map((cat) => ({
+      ...cat,
+      count: cat?.count ?? 0,
+      pending: cat?.pending ?? 0,
+    }));
+  }, [categoriesQuery.data]);
 
   const lexiconEntries = lexiconQuery.data ?? [];
   const isPendingFilter = effectiveFilter === "pending";

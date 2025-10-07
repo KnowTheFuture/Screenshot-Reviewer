@@ -15,6 +15,11 @@ from ..storage import get_item_or_404, load_categories, load_screenshots, save_c
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+FALLBACK_CATEGORIES = [
+    {"id": "default-1", "name": "General"},
+    {"id": "default-2", "name": "Important"},
+    {"id": "default-3", "name": "To Review"},
+]
 
 def _annotate_counts(categories: List[dict]) -> List[Category]:
     screenshots = load_screenshots()
@@ -37,6 +42,12 @@ def _annotate_counts(categories: List[dict]) -> List[Category]:
 def list_categories():
     try:
         categories = load_categories()
+        if not isinstance(categories, list):
+            logger.warning("Unexpected categories payload %s; returning fallback catalogue", type(categories))
+            return _annotate_counts(FALLBACK_CATEGORIES.copy())
+        if not categories:
+            logger.info("No categories found on disk, using fallback defaults")
+            return _annotate_counts(FALLBACK_CATEGORIES.copy())
         return _annotate_counts(categories)
     except HTTPException:
         raise

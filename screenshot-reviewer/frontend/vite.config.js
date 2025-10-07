@@ -5,12 +5,12 @@ import pkg from "./package.json";
 
 export default defineConfig({
   plugins: [react()],
-  sserver: {
-    port: 5173,
+  server: {
+    port: 0,
     open: true,
     proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000',
+      "/api": {
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
     },
