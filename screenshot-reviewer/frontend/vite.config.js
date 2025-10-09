@@ -6,14 +6,22 @@ import pkg from "./package.json";
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 0,
-    open: true,
+    port: 5173,
+    strictPort: false,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8000",
+        target: "http://localhost:8000",
         changeOrigin: true,
+        rewrite: (p) => p, // keep `/api` prefix intact
+        configure: (proxy, options) => {
+          console.log(
+            `[Vite Proxy] → ${options.target} (handling ${options.context})`
+          );
+        },
       },
     },
+    host: "0.0.0.0",
+    open: false,
   },
   resolve: {
     alias: {
@@ -35,5 +43,8 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
     },
+  },
+  configure: (proxy, options) => {
+    console.log(`[Vite Proxy Active] Target: ${options.target}`);
   },
 });

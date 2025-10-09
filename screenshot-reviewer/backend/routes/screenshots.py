@@ -5,6 +5,11 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
+# Path to screenshots.json for simple listing endpoint
+from pathlib import Path
+import json
+SCREENSHOTS_FILE = Path(__file__).parent / "data" / "screenshots.json"
+
 import logging
 import os
 from datetime import datetime, timezone
@@ -42,7 +47,8 @@ def _enrich_screenshot(item: dict, base_url: str = FILES_BASE_URL) -> dict:
     if path and os.path.exists(path):
         filename = os.path.basename(path)
         base = base_url.rstrip("/")
-        enriched["url"] = f"{base}/files/{quote(filename)}"
+        FILES_BASE_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000")
+        #enriched["url"] = f"{base}/files/{quote(filename)}"
     else:
         logger.warning("Missing file for screenshot %s: %s", item.get("id"), path)
         enriched["url"] = None
@@ -179,6 +185,21 @@ def _build_progress(dataset: List[dict]) -> dict:
     }
 
 
+@router.get("/ping", summary="Health check")
+def ping():
+    return {"status": "ok", "route": "screenshots"}
+
+
+@router.get("/", summary="List screenshots (simple)")
+def list_screenshots_simple():
+    if not SCREENSHOTS_FILE.exists():
+        raise HTTPException(status_code=404, detail="screenshots.json not found")
+    with open(SCREENSHOTS_FILE, "r") as f:
+        data = json.load(f)
+    return {"count": len(data), "items": data[:10]}
+
+
+# The original paginated/filtered endpoint remains unchanged below.
 @router.get("/", response_model=PaginatedResponse)
 def list_screenshots(
     page: int = Query(1, ge=1),

@@ -104,12 +104,12 @@ def _build_cors_config() -> tuple[list[str], str | None]:
 def _create_app() -> FastAPI:
     allow_origins, allow_origin_regex = _build_cors_config()
 
-    app_instance = FastAPI(
+    app = FastAPI(
         title="Screenshot Reviewer API",
         version="2.1.0",
         lifespan=lifespan,
     )
-    app_instance.debug = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
+    app.debug = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
 
     cors_kwargs = dict(
         allow_origins=allow_origins,
@@ -120,29 +120,41 @@ def _create_app() -> FastAPI:
     if allow_origin_regex:
         cors_kwargs["allow_origin_regex"] = allow_origin_regex
 
-    app_instance.add_middleware(CORSMiddleware, **cors_kwargs)
+    app.router.redirect_slashes = True
+    app.router.redirect_trailing_slash = True  # ✅ add this line
+
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     # ✅ Include routers
-    app_instance.include_router(screenshots.router, prefix="/api/screenshots", tags=["Screenshots"])
-    app_instance.include_router(categories.router, prefix="/api/categories", tags=["Categories"])
-    app_instance.include_router(lexicon.router, prefix="/api/lexicon", tags=["Lexicon"])
-    app_instance.include_router(state.router, prefix="/api/state", tags=["State"])
+    #app.include_router(screenshots.router, prefix="/api/screenshots", tags=["screenshots"])
+    #app.include_router(categories.router, prefix="/api/categories", tags=["categories"])
+    #app.include_router(lexicon.router, prefix="/api/lexicon", tags=["lexicon"])
+    #app.include_router(state.router, prefix="/api/state", tags=["state"])
+
+    # Note: keeping /api prefix for compatibility with existing frontend deployments
+    app.include_router(screenshots.router, prefix="/api", tags=["screenshots"])
+
+    # ✅ Include routers = without /api prefix for compatibility
+    #app.include_router(screenshots.router, prefix="/screenshots", tags=["screenshots"])
+    app.include_router(categories.router, prefix="/categories", tags=["categories"])
+    app.include_router(lexicon.router, prefix="/lexicon", tags=["lexicon"])
+    app.include_router(state.router, prefix="/state", tags=["state"])
 
     # ✅ Serve static screenshots
     if SCREENSHOTS_DIR.exists():
-        app_instance.mount("/files", StaticFiles(directory=SCREENSHOTS_DIR), name="files")
+        app.mount("/files", StaticFiles(directory=SCREENSHOTS_DIR), name="files")
 
     # ✅ Healthcheck
-    @app_instance.get("/api/health")
+    @app.get("/api/health")
     def healthcheck():
         return {"status": "ok"}
 
     # ✅ Serve frontend build if available
     frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
     if frontend_dist.exists():
-        app_instance.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+        app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
 
-    return app_instance
+    return app
 
 async def _handle_exit(sig: signal.Signals | int) -> None:
     sig_name = getattr(sig, "name", sig)
