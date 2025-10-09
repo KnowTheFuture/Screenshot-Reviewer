@@ -126,19 +126,10 @@ def _create_app() -> FastAPI:
     app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     # ✅ Include routers
-    #app.include_router(screenshots.router, prefix="/api/screenshots", tags=["screenshots"])
-    #app.include_router(categories.router, prefix="/api/categories", tags=["categories"])
-    #app.include_router(lexicon.router, prefix="/api/lexicon", tags=["lexicon"])
-    #app.include_router(state.router, prefix="/api/state", tags=["state"])
-
-    # Note: keeping /api prefix for compatibility with existing frontend deployments
-    app.include_router(screenshots.router, prefix="/api", tags=["screenshots"])
-
-    # ✅ Include routers = without /api prefix for compatibility
-    #app.include_router(screenshots.router, prefix="/screenshots", tags=["screenshots"])
-    app.include_router(categories.router, prefix="/categories", tags=["categories"])
-    app.include_router(lexicon.router, prefix="/lexicon", tags=["lexicon"])
-    app.include_router(state.router, prefix="/state", tags=["state"])
+    app.include_router(screenshots.router, prefix="/api/screenshots", tags=["screenshots"])
+    app.include_router(categories.router, prefix="/api/categories", tags=["categories"])
+    app.include_router(lexicon.router, prefix="/api/lexicon", tags=["lexicon"])
+    app.include_router(state.router, prefix="/api/state", tags=["state"])
 
     # ✅ Serve static screenshots
     if SCREENSHOTS_DIR.exists():

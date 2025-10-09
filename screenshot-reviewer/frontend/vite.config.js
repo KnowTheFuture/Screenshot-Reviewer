@@ -12,16 +12,9 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
-        rewrite: (p) => p, // keep `/api` prefix intact
-        configure: (proxy, options) => {
-          console.log(
-            `[Vite Proxy] → ${options.target} (handling ${options.context})`
-          );
-        },
+        rewrite: p => p.replace(/^\/api/, "/api"), // explicitly preserve /api prefix
       },
     },
-    host: "0.0.0.0",
-    open: false,
   },
   resolve: {
     alias: {
@@ -40,11 +33,5 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: "./vitest.setup.js",
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-    },
-  },
-  configure: (proxy, options) => {
-    console.log(`[Vite Proxy Active] Target: ${options.target}`);
   },
 });

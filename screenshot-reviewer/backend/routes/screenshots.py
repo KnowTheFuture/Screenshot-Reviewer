@@ -47,8 +47,7 @@ def _enrich_screenshot(item: dict, base_url: str = FILES_BASE_URL) -> dict:
     if path and os.path.exists(path):
         filename = os.path.basename(path)
         base = base_url.rstrip("/")
-        FILES_BASE_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000")
-        #enriched["url"] = f"{base}/files/{quote(filename)}"
+        enriched["url"] = f"{base}/files/{quote(filename)}"
     else:
         logger.warning("Missing file for screenshot %s: %s", item.get("id"), path)
         enriched["url"] = None
@@ -190,7 +189,7 @@ def ping():
     return {"status": "ok", "route": "screenshots"}
 
 
-@router.get("/", summary="List screenshots (simple)")
+@router.get("/simple", summary="List screenshots (simple)")
 def list_screenshots_simple():
     if not SCREENSHOTS_FILE.exists():
         raise HTTPException(status_code=404, detail="screenshots.json not found")
