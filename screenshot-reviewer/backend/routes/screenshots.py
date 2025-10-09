@@ -1,6 +1,9 @@
 """Routes for screenshot CRUD and batch operations."""
-
 from __future__ import annotations
+
+from fastapi import APIRouter
+
+router = APIRouter()
 
 import logging
 import os
@@ -24,7 +27,7 @@ from ..models import (
 )
 from ..storage import load_lexicon, load_screenshots, save_screenshots
 
-router = APIRouter()
+#router = APIRouter()
 logger = logging.getLogger(__name__)
 
 LOW_CONFIDENCE_THRESHOLD = 0.6
@@ -187,40 +190,50 @@ def list_screenshots(
 ):
     try:
         dataset = load_screenshots()
+
+        # Filter by category
         if category:
             dataset = [item for item in dataset if item.get("primary_category") == category]
 
+        # Pending filter
         if filter == ScreenshotFilter.PENDING:
             dataset = [item for item in dataset if not (item.get("primary_category") or "").strip()]
 
+        # Match filter mode
         dataset = [item for item in dataset if _match_filter(item, filter_mode=filter)]
 
+        # Search filter
         if search:
             dataset = [item for item in dataset if _apply_search(item, search)]
 
+        # Sort newest first
         dataset.sort(
             key=lambda entry: _parse_datetime(entry.get("created_at"))
             or datetime.min.replace(tzinfo=timezone.utc),
             reverse=True,
         )
 
+        # Add IDs and suggestions
         for item in dataset:
             item.setdefault("id", uuid4().hex)
             item["suggestions"] = _generate_suggestions(item)
 
+        # Handle grouping and pagination
         paginated_source, groups = _with_groups(dataset, group_id)
-
         total = len(paginated_source)
         total_pages = max((total - 1) // page_size + 1, 1)
         page = min(page, total_pages)
         page_items = _paginate(paginated_source, page, page_size)
 
+        # Enrich and validate
         enriched_items = [_enrich_screenshot(item) for item in page_items]
         screenshots = [Screenshot.model_validate(enriched) for enriched in enriched_items]
-        progress = _build_progress(load_screenshots())
 
+        # Build progress even if dataset empty
+        progress = _build_progress(load_screenshots())
         groups.current_index = min(groups.current_index, max(len(groups.items) - 1, 0))
 
+        # ✅ Always return 200, even if no items
         return PaginatedResponse(
             items=screenshots,
             page=page,
@@ -230,9 +243,8 @@ def list_screenshots(
             progress=progress,
             groups=groups,
         )
-    except HTTPException:
-        raise
-    except Exception as exc:  # pragma: no cover - defensive
+
+    except Exception as exc:  # pragma: no cover
         logger.exception("Error in list_screenshots")
         raise HTTPException(status_code=500, detail=str(exc))
 

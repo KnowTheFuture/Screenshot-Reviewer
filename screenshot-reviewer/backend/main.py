@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import psutil
 import os
 import re
 import signal
@@ -14,10 +15,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .routes import categories, lexicon, screenshots, state
-from .state_manager import load_selection_state, save_selection_state
+# ✅ Use absolute imports since we’re running from project root with `uvicorn backend.main:app`
+from backend.routes import categories, lexicon, screenshots, state
+from backend.state_manager import load_selection_state, save_selection_state
 
-
+# ─────────────────────────────────────────────
+# Logging Configuration
+# ─────────────────────────────────────────────
 def _configure_logging() -> None:
     """Configure logging once, honoring optional DEBUG and LOG_LEVEL settings."""
     debug_enabled = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
@@ -36,17 +40,24 @@ def _configure_logging() -> None:
 _configure_logging()
 logger = logging.getLogger("screenshot_reviewer")
 
+# ─────────────────────────────────────────────
+# Global Constants
+# ─────────────────────────────────────────────
 SCREENSHOTS_DIR = Path("/Volumes/990_Pro/Screenshots")
-LOCALHOST_ORIGIN_REGEX = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$", re.IGNORECASE)
+LOCALHOST_ORIGIN_REGEX = re.compile(r"^https?://(localhost|0\.0\.0\.0)(:\d+)?$", re.IGNORECASE)
 
-
+# ─────────────────────────────────────────────
+# Graceful Shutdown Handler
+# ─────────────────────────────────────────────
 async def _handle_exit(sig: signal.Signals | int) -> None:
     """Handle shutdown signals gracefully and trigger async save."""
     sig_name = getattr(sig, "name", sig)
     logger.info("📴 Received %s, saving state", sig_name)
     await save_selection_state()
 
-
+# ─────────────────────────────────────────────
+# Lifespan Events
+# ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Application startup")
@@ -57,16 +68,18 @@ async def lifespan(app: FastAPI):
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(_handle_exit(s)))
-            except NotImplementedError:  # pragma: no cover - platform dependent
+            except NotImplementedError:
                 logger.debug("Signal %s unsupported in this environment", sig)
-    except RuntimeError:  # pragma: no cover - defensive
+    except RuntimeError:
         logger.debug("No running event loop available for signal handlers")
 
     yield
     logger.info("🛑 Application shutdown")
     await save_selection_state()
 
-
+# ─────────────────────────────────────────────
+# CORS Configuration
+# ─────────────────────────────────────────────
 def _sanitize_origins(raw_value: str) -> list[str]:
     items = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
     seen: set[str] = set()
@@ -81,18 +94,21 @@ def _sanitize_origins(raw_value: str) -> list[str]:
 def _build_cors_config() -> tuple[list[str], str | None]:
     raw = os.getenv("ALLOWED_ORIGINS", "")
     explicit = _sanitize_origins(raw)
-    if not explicit:
+    if not explicit or "*" in explicit:
         return ["*"], LOCALHOST_ORIGIN_REGEX.pattern
-    if "*" in explicit:
-        return ["*"], LOCALHOST_ORIGIN_REGEX.pattern
-    # Respect explicit origins but still allow any localhost / 127.0.0.1 via regex.
     return explicit, LOCALHOST_ORIGIN_REGEX.pattern
 
-
+# ─────────────────────────────────────────────
+# App Factory
+# ─────────────────────────────────────────────
 def _create_app() -> FastAPI:
     allow_origins, allow_origin_regex = _build_cors_config()
 
-    app_instance = FastAPI(title="Screenshot Reviewer API", version="2.1.0", lifespan=lifespan)
+    app_instance = FastAPI(
+        title="Screenshot Reviewer API",
+        version="2.1.0",
+        lifespan=lifespan,
+    )
     app_instance.debug = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
 
     cors_kwargs = dict(
@@ -110,25 +126,40 @@ def _create_app() -> FastAPI:
     app_instance.include_router(screenshots.router, prefix="/api/screenshots", tags=["Screenshots"])
     app_instance.include_router(categories.router, prefix="/api/categories", tags=["Categories"])
     app_instance.include_router(lexicon.router, prefix="/api/lexicon", tags=["Lexicon"])
-    app_instance.include_router(state.router, tags=["State"])
+    app_instance.include_router(state.router, prefix="/api/state", tags=["State"])
 
+    # ✅ Serve static screenshots
     if SCREENSHOTS_DIR.exists():
         app_instance.mount("/files", StaticFiles(directory=SCREENSHOTS_DIR), name="files")
 
+    # ✅ Healthcheck
     @app_instance.get("/api/health")
     def healthcheck():
         return {"status": "ok"}
 
-    # ✅ Serve frontend if built
+    # ✅ Serve frontend build if available
     frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
     if frontend_dist.exists():
-        app_instance.mount(
-            "/",
-            StaticFiles(directory=frontend_dist, html=True),
-            name="frontend",
-        )
+        app_instance.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
 
     return app_instance
 
+async def _handle_exit(sig: signal.Signals | int) -> None:
+    sig_name = getattr(sig, "name", sig)
+    logger.info("📴 Received %s, saving state and cleaning up", sig_name)
+    await save_selection_state()
+    try:
+        # Auto-kill any other uvicorn processes bound to same port
+        current_pid = os.getpid()
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+            if "uvicorn" in (proc.info["name"] or "") and proc.info["pid"] != current_pid:
+                proc.kill()
+                logger.info("💀 Terminated lingering uvicorn PID %s", proc.info["pid"])
+    except Exception as e:
+        logger.warning("Cleanup failed: %s", e)
 
+
+# ─────────────────────────────────────────────
+# App Instance
+# ─────────────────────────────────────────────
 app = _create_app()

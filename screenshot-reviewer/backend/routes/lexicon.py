@@ -1,18 +1,19 @@
 """Routes for lexicon CRUD operations."""
-
 from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException
+
+router = APIRouter()
 
 import logging
 from datetime import datetime
 from typing import List
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
-
 from ..models import LexiconCreate, LexiconEntry
 from ..storage import get_item_or_404, load_lexicon, save_lexicon
 
-router = APIRouter()
+#router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
