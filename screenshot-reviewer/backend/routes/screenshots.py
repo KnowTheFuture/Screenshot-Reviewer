@@ -199,7 +199,7 @@ def list_screenshots_simple():
 
 
 # The original paginated/filtered endpoint remains unchanged below.
-@router.get("/", response_model=PaginatedResponse)
+@router.get("", response_model=PaginatedResponse)
 def list_screenshots(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),

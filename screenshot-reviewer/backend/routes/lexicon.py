@@ -17,7 +17,7 @@ from ..storage import get_item_or_404, load_lexicon, save_lexicon
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", response_model=List[LexiconEntry])
+@router.get("", response_model=List[LexiconEntry])
 def list_entries():
     try:
         entries = load_lexicon()

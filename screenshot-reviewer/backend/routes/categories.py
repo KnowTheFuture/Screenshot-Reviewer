@@ -38,7 +38,7 @@ def _annotate_counts(categories: List[dict]) -> List[Category]:
     return [Category.model_validate(cat) for cat in categories]
 
 
-@router.get("/", response_model=List[Category])
+@router.get("", response_model=List[Category])
 def list_categories():
     try:
         categories = load_categories()

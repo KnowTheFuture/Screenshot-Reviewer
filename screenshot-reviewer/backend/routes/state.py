@@ -8,7 +8,7 @@ from .. import state_manager
 router = APIRouter()
 logger = logging.getLogger("screenshot_reviewer")
 
-@router.get("/", summary="Get current selection state")
+@router.get("", summary="Get current selection state")
 def get_state() -> dict:
     """Return the current in-memory selection state."""
     return state_manager.get_current_state()
