@@ -9,7 +9,7 @@ const BASE_THEME = {
   background: "#ffffff",
   surface: "#ffffff",
   surfaceMuted: "#f4f4f5",
-  sidebar: "#f5f5f5",
+  sidebar: "#f5f5f7",
   sidebarBorder: "#e5e7eb",
   panel: "#f8fafc",
   text: "#111827",
@@ -27,16 +27,29 @@ const BASE_THEME = {
   fontSans: "\"Inter\", \"SF Pro Display\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
 };
 
-const camelToKebab = (value) => value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-
 const themeVariables = Object.entries(rawThemeConfig).reduce((acc, [name, config]) => {
   const merged = { ...BASE_THEME, ...config };
-  const cssVariables = Object.entries(merged).reduce((result, [key, value]) => {
-    const cssVar = `--${camelToKebab(key)}`;
-    result[cssVar] = value;
-    return result;
-  }, {});
-  acc[name] = cssVariables;
+  acc[name] = {
+    "--bg-color": merged.background,
+    "--surface-color": merged.surface,
+    "--surface-muted": merged.surfaceMuted,
+    "--sidebar-bg": merged.sidebar,
+    "--sidebar-border": merged.sidebarBorder,
+    "--panel-bg": merged.panel,
+    "--text-color": merged.text,
+    "--muted-text-color": merged.textMuted,
+    "--subtle-text-color": merged.textSubtle,
+    "--border-color": merged.border,
+    "--accent-color": merged.accent,
+    "--accent-soft": merged.accentSoft,
+    "--accent-strong": merged.accentStrong,
+    "--highlight-color": merged.highlight,
+    "--card-shadow": merged.shadow,
+    "--tag-bg": merged.tagBg,
+    "--tag-text": merged.tagText,
+    "--card-tint": merged.cardTint,
+    "--font-sans": merged.fontSans,
+  };
   return acc;
 }, {});
 

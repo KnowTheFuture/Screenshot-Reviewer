@@ -27,11 +27,24 @@ function SettingsModal({
   const settings = controlledSettings ?? localSettings;
   const setSettings = onChangeSettings ?? ((update) => setLocalSettings(update));
   const version = pkg?.version ?? "dev";
+  const totalImages = (settings?.gridColumns ?? 1) * (settings?.gridRows ?? 1);
 
   if (!isOpen) return null;
 
   const handleHighlightChange = (event) => {
     setSettings({ highlightColor: event.target.value });
+  };
+
+  const handleGridColumnsChange = (event) => {
+    setSettings({ gridColumns: Number(event.target.value) });
+  };
+
+  const handleGridRowsChange = (event) => {
+    setSettings({ gridRows: Number(event.target.value) });
+  };
+
+  const handleGridGapChange = (event) => {
+    setSettings({ gridGap: Number(event.target.value) });
   };
 
   const handleClearSelection = async () => {
@@ -60,7 +73,7 @@ function SettingsModal({
       <div className="w-full max-w-sm rounded-2xl settings-surface border border-theme p-6 shadow-2xl">
         <h2 className="text-lg font-bold text-theme tracking-tight">Settings</h2>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           <label htmlFor="highlight" className="block text-sm font-semibold uppercase tracking-wide text-subtle">
             Selection Highlight
           </label>
@@ -91,6 +104,58 @@ function SettingsModal({
             Background: {themeConfig[theme]?.background ?? "—"} · Text:{" "}
             {themeConfig[theme]?.text ?? "—"}
           </p>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-subtle">Grid layout</h3>
+            <span className="text-xs text-muted">
+              {settings.gridColumns} × {settings.gridRows} ({totalImages} images)
+            </span>
+          </div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-subtle">
+            Columns
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={settings.gridColumns ?? 1}
+                onChange={handleGridColumnsChange}
+                className="flex-1"
+              />
+              <span className="w-6 text-right text-sm text-theme">{settings.gridColumns}</span>
+            </div>
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-subtle">
+            Rows
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={settings.gridRows ?? 1}
+                onChange={handleGridRowsChange}
+                className="flex-1"
+              />
+              <span className="w-6 text-right text-sm text-theme">{settings.gridRows}</span>
+            </div>
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-subtle">
+            Image gap (px)
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="range"
+                min="0"
+                max="32"
+                step="1"
+                value={settings.gridGap ?? 0}
+                onChange={handleGridGapChange}
+                className="flex-1"
+              />
+              <span className="w-8 text-right text-sm text-theme">{settings.gridGap}</span>
+            </div>
+          </label>
         </div>
 
         {categories.length > 0 && (

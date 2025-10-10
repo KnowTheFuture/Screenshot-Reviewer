@@ -19,8 +19,8 @@ export default function LexiconPanel({ entries, onCreate, onDelete, onOpenSettin
   };
 
   return (
-    <aside className="lexicon-panel flex w-[22rem] shrink-0 flex-col">
-      <div className="flex items-start justify-between px-6 py-5">
+    <aside className="lexicon-panel flex w-80 shrink-0 flex-col">
+      <div className="flex items-start justify-between px-5 py-4">
         <div>
           <h2 className="text-lg font-semibold text-theme">Lexicon</h2>
           <p className="text-xs uppercase tracking-wide text-subtle">Keywords that auto-suggest tags.</p>
@@ -35,7 +35,7 @@ export default function LexiconPanel({ entries, onCreate, onDelete, onOpenSettin
         </button>
       </div>
       <div className="flex h-[calc(100%-5.5rem)] flex-col">
-        <div className="scroll-soft flex-1 overflow-y-auto px-6 pb-4">
+        <div className="scroll-soft flex-1 overflow-y-auto px-5 pb-3">
           <ul className="space-y-4">
             {entries.map((entry) => (
               <li key={entry.id} className="lexicon-card rounded-xl p-4 text-sm">
@@ -66,7 +66,7 @@ export default function LexiconPanel({ entries, onCreate, onDelete, onOpenSettin
             )}
           </ul>
         </div>
-        <form onSubmit={handleSubmit} className="border-t border-theme px-6 py-4">
+        <form onSubmit={handleSubmit} className="border-t border-theme px-5 py-4">
           <label className="block text-[11px] font-semibold uppercase tracking-wide text-subtle">
             Keyword
             <input

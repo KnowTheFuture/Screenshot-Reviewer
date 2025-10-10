@@ -10,7 +10,7 @@ export default function Toolbar({
   totalGroups,
 }) {
   return (
-    <div className="toolbar-surface flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+    <div className="toolbar-surface flex flex-wrap items-center justify-between gap-3 px-4 py-3">
       <div className="flex items-center gap-3">
         <select
           value={filter}

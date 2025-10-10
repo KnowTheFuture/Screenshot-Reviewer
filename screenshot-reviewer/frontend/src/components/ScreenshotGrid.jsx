@@ -85,10 +85,19 @@ export default function ScreenshotGrid({
   totalPages,
   onPageChange,
   categoryFilter = "all",
+  gridColumns = 5,
+  gridRows = 5,
+  gridGap = 2,
+  pageSize,
 }) {
   const categoryColors = useCategoryColorStore((state) => state.colors);
   const isControlled = selected !== undefined;
   const [internalSelection, setInternalSelection] = useState(() => normalizeSelection(selected));
+  const clampedColumns = Math.max(1, Math.min(10, gridColumns));
+  const clampedRows = Math.max(1, Math.min(10, gridRows));
+  const clampedGap = Math.max(0, Math.min(32, gridGap));
+  const maxItems = pageSize ?? clampedColumns * clampedRows;
+  const items = useMemo(() => screenshots.slice(0, Math.max(1, maxItems)), [screenshots, maxItems]);
 
   const selectionSet = useMemo(
     () => (isControlled ? normalizeSelection(selected) : internalSelection),
@@ -113,7 +122,7 @@ export default function ScreenshotGrid({
   const selectRange = (anchorIndex, targetIndex) => {
     const [start, end] =
       anchorIndex < targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
-    const idsInRange = screenshots.slice(start, end + 1).map((item) => item.id);
+    const idsInRange = items.slice(start, end + 1).map((item) => item.id);
     emitSelection(idsInRange);
   };
 
@@ -124,7 +133,7 @@ export default function ScreenshotGrid({
     }
 
     if (event.shiftKey && selectionSet.size) {
-      const ids = screenshots.map((item) => item.id);
+      const ids = items.map((item) => item.id);
       const selectedIndices = ids
         .map((id, idx) => (selectionSet.has(id) ? idx : -1))
         .filter((idx) => idx >= 0);
@@ -139,12 +148,12 @@ export default function ScreenshotGrid({
   };
 
   const selectEntirePage = () => {
-    emitSelection(screenshots.map((item) => item.id));
+    emitSelection(items.map((item) => item.id));
   };
 
   return (
     <section className="grid-surface scroll-soft flex-1 overflow-auto">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 text-sm text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm text-muted">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -177,8 +186,14 @@ export default function ScreenshotGrid({
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 px-6 pb-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-        {screenshots.map((screenshot, index) => {
+      <div
+        className="grid px-4 pb-6"
+        style={{
+          gridTemplateColumns: `repeat(${clampedColumns}, minmax(0, 1fr))`,
+          gap: `${clampedGap}px`,
+        }}
+      >
+        {items.map((screenshot, index) => {
           const categoryKey = screenshot.primary_category ?? screenshot.category ?? "default";
           const categoryColor =
             categoryColors[categoryKey] ??

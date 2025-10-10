@@ -67,8 +67,8 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="sidebar-panel flex h-full w-72 shrink-0 flex-col">
-      <div className="flex items-center justify-between px-5 py-5">
+    <aside className="sidebar-panel flex h-full w-64 shrink-0 flex-col">
+      <div className="flex items-center justify-between px-4 py-4">
         <h2 className="text-lg font-semibold text-theme tracking-tight">Categories</h2>
         <button
           type="button"
@@ -78,7 +78,7 @@ export default function Sidebar({
           {showForm ? "Cancel" : "Add"}
         </button>
       </div>
-      <div className="scroll-soft flex-1 space-y-1 overflow-y-auto px-4 pb-6">
+      <div className="scroll-soft flex-1 space-y-1 overflow-y-auto px-3 pb-5">
         <CategoryItem
           key="all"
           category={{ name: "All", count: categories.reduce((acc, c) => acc + c.count, 0) }}
@@ -125,7 +125,7 @@ export default function Sidebar({
         ))}
       </div>
       {showForm && (
-        <form onSubmit={handleSubmit} className="border-t border-theme px-5 py-4">
+        <form onSubmit={handleSubmit} className="border-t border-theme px-4 py-4">
           <label className="block text-sm font-semibold text-theme">
             New category
             <input
@@ -143,7 +143,7 @@ export default function Sidebar({
         </form>
       )}
       {renameTarget && (
-        <form onSubmit={handleRename} className="border-t border-theme px-5 py-4">
+        <form onSubmit={handleRename} className="border-t border-theme px-4 py-4">
           <label className="block text-sm font-semibold text-theme">
             Rename category
             <input

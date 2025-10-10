@@ -22,8 +22,13 @@ import useSelectionStore from "../store/selectionStore.js";
 import useSelectionPersistence from "../hooks/useSelectionPersistence.js";
 import useSelectionActions from "../hooks/useSelectionActions.js";
 import useCategoryColorStore from "../store/categoryColorStore.js";
+import useLocalSettings from "../hooks/useLocalSettings.js";
 
-const PAGE_SIZE = 50;
+const computePageSize = (settings) => {
+  const cols = Math.max(1, Math.min(10, settings?.gridColumns ?? 5));
+  const rows = Math.max(1, Math.min(10, settings?.gridRows ?? 5));
+  return cols * rows;
+};
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -41,16 +46,22 @@ export default function Home() {
   const ensureCategoryColor = useCategoryColorStore((state) => state.ensureColor);
   const renameCategoryColor = useCategoryColorStore((state) => state.renameCategoryColor);
   const removeCategoryColor = useCategoryColorStore((state) => state.removeColor);
+  const [settings, setSettings] = useLocalSettings();
+
+  const gridColumns = Math.max(1, Math.min(10, settings?.gridColumns ?? 5));
+  const gridRows = Math.max(1, Math.min(10, settings?.gridRows ?? 5));
+  const gridGap = Math.max(0, Math.min(32, settings?.gridGap ?? 2));
+  const pageSize = computePageSize(settings);
 
   const effectiveFilter = categoryFilter === "pending" ? "pending" : filter;
   const categoryParam = categoryFilter === "all" || categoryFilter === "pending" ? undefined : categoryFilter;
 
   const screenshotsQuery = useQuery({
-    queryKey: ["screenshots", { page, filter: effectiveFilter, search, categoryFilter, groupId }],
+    queryKey: ["screenshots", { page, filter: effectiveFilter, search, categoryFilter, groupId, pageSize }],
     queryFn: () =>
       fetchScreenshots({
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
         filter: effectiveFilter,
         search,
         category: categoryParam,
@@ -121,7 +132,18 @@ export default function Home() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lexicon"] }),
   });
 
-  const screenshots = screenshotsQuery.data?.items ?? [];
+  const screenshots = useMemo(() => {
+    const items = screenshotsQuery.data?.items ?? [];
+    return items.map((item) => {
+      if (item?.primary_category || item?.status === "deleted") {
+        return item;
+      }
+      if (item?.status === "pending") {
+        return item;
+      }
+      return { ...item, status: "pending" };
+    });
+  }, [screenshotsQuery.data]);
   const totalPages = screenshotsQuery.data?.total_pages ?? 1;
   const progress = screenshotsQuery.data?.progress ?? { reviewed: 0, deferred: 0, remaining: 0 };
   const groupMeta = screenshotsQuery.data?.groups ?? { items: [], current_index: 0 };
@@ -134,6 +156,12 @@ export default function Home() {
     if (!Array.isArray(categoriesQuery.data)) return;
     categoriesQuery.data.forEach((category) => ensureCategoryColor(category.name));
   }, [categoriesQuery.data, ensureCategoryColor]);
+
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [pageSize, page, setPage]);
 
   const categoryList = useMemo(() => {
     const raw = categoriesQuery.data;
@@ -184,8 +212,12 @@ export default function Home() {
   };
 
   const handleModalSave = (draft) => {
+    const payload = { ...draft };
+    if (!payload.primary_category) {
+      payload.status = "pending";
+    }
     setActiveScreenshot(null);
-    updateMutation.mutate({ id: draft.id, payload: draft });
+    updateMutation.mutate({ id: payload.id, payload });
   };
 
   const handleGroupNavigate = (offset) => {
@@ -229,7 +261,7 @@ export default function Home() {
           currentGroup={groupMeta.current_index + 1}
           totalGroups={groupMeta.items.length}
         />
-        <div className="batch-bar flex flex-wrap items-center justify-between gap-4 px-6 py-3 text-sm">
+        <div className="batch-bar flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-sm">
           <div className="flex items-center gap-3">
             <select
               className="rounded border border-theme bg-[var(--surface-color)] px-3 py-2 text-sm text-theme shadow-sm focus:border-[var(--accent-color)] focus:outline-none"
@@ -283,6 +315,10 @@ export default function Home() {
             clear();
           }}
           categoryFilter={categoryFilter}
+          gridColumns={gridColumns}
+          gridRows={gridRows}
+          gridGap={gridGap}
+          pageSize={pageSize}
         />
         {screenshots.length === 0 && (
           <div className="mt-8 text-center text-muted">{emptyMessage}</div>
@@ -306,6 +342,8 @@ export default function Home() {
         onClose={() => setShowSettings(false)}
         onClearSelection={clearPersistence}
         categories={categoryList}
+        settings={settings}
+        onChangeSettings={setSettings}
       />
     </div>
   );
