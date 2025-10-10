@@ -45,7 +45,7 @@ logs/
 !screenshots.json          # Keep this file tracked
 !lexicon.json              # If you use a lexicon reference
 !categories.json           # If you use categories
-!packages.json             # Keep this file tracked
+!package.json             # Keep this file tracked
 !package-lock.json
 
 # ======================================
