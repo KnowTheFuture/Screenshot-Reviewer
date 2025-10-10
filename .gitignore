@@ -47,6 +47,7 @@ logs/
 !categories.json           # If you use categories
 !package.json             # Keep this file tracked
 !package-lock.json
+!*.json
 
 # ======================================
 # 🖼 Image Rules

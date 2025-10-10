@@ -1,0 +1,52 @@
+{
+  "question code": {
+    "match": [
+      "question code"
+    ],
+    "tags": [
+      "Response:AI",
+      "survey"
+    ]
+  },
+  "oxiclean, response:ai, have purchased in the past year, survey grid, how well do you know the following, cleaning products": {
+    "match": [
+      "oxiclean, response:ai, have purchased in the past year, survey grid, how well do you know the following, cleaning products"
+    ],
+    "tags": [
+      "survey",
+      "market research",
+      "brand awareness",
+      "consumer goods",
+      "ResponseAI",
+      "OxiClean"
+    ]
+  },
+  "satisfactory": {
+    "match": [
+      "satisfactory"
+    ],
+    "tags": [
+      "Satisfactory",
+      "Map",
+      "Factory Planning",
+      "Game Screenshot"
+    ]
+  },
+  "stain removers, terminate, consumer": {
+    "match": [
+      "stain removers, terminate, consumer"
+    ],
+    "tags": [
+      "stain removers",
+      "OxiClean"
+    ]
+  },
+  "pvp is disabled, upkeep time": {
+    "match": [
+      "pvp is disabled, upkeep time"
+    ],
+    "tags": [
+      "RUST"
+    ]
+  }
+}
