@@ -68,7 +68,7 @@ function ScreenshotCard({ screenshot, isSelected, onClick, onOpen, tintStyle, ca
           event.stopPropagation();
           onOpen(screenshot);
         }}
-        className="absolute right-2 top-2 hidden rounded-full bg-white/80 px-2 py-1 text-xs font-medium text-slate-700 shadow group-hover:block"
+        className="absolute right-2 top-2 hidden rounded-full bg-[var(--surface-color)]/90 px-2 py-1 text-xs font-medium text-theme shadow group-hover:block"
       >
         Details
       </button>
@@ -153,7 +153,7 @@ export default function ScreenshotGrid({
 
   return (
     <section className="grid-surface scroll-soft flex-1 overflow-auto">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-2 py-3 text-sm text-muted">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -187,7 +187,7 @@ export default function ScreenshotGrid({
         </div>
       </div>
       <div
-        className="grid px-4 pb-6"
+        className="grid px-1 pb-4"
         style={{
           gridTemplateColumns: `repeat(${clampedColumns}, minmax(0, 1fr))`,
           gap: `${clampedGap}px`,

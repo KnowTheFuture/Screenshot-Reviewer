@@ -41,6 +41,8 @@ body[data-theme="matrix"] {
 .app-shell {
   background: var(--bg-color);
   color: var(--text-color);
+  padding: 15px;
+  box-sizing: border-box;
 }
 
 .text-theme {
@@ -87,6 +89,7 @@ body[data-theme="matrix"] {
   border-bottom: 1px solid var(--border-color);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
   backdrop-filter: blur(8px);
+  color: var(--text-color);
 }
 
 .batch-bar {

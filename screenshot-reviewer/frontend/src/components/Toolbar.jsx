@@ -10,7 +10,7 @@ export default function Toolbar({
   totalGroups,
 }) {
   return (
-    <div className="toolbar-surface flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+    <div className="toolbar-surface flex flex-wrap items-center justify-between gap-3 px-3 py-3">
       <div className="flex items-center gap-3">
         <select
           value={filter}
@@ -43,7 +43,7 @@ export default function Toolbar({
           </button>
         </div>
       </div>
-      <div className="flex flex-1 justify-center px-4">
+      <div className="flex flex-1 justify-center px-3">
         <input
           value={search}
           onChange={(event) => onSearchChange?.(event.target.value)}

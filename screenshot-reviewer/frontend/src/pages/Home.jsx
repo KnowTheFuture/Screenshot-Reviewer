@@ -93,11 +93,34 @@ export default function Home() {
   const createCategoryMutation = useMutation({
     mutationFn: (name) => createCategory({ name }),
     onSuccess: (data, name) => {
-      if (data?.name) {
-        ensureCategoryColor(data.name);
-      } else if (typeof name === "string") {
-        ensureCategoryColor(name);
+      const resolvedName = data?.name ?? (typeof name === "string" ? name : undefined);
+      if (resolvedName) {
+        ensureCategoryColor(resolvedName);
       }
+      queryClient.setQueryData(["categories"], (previous) => {
+        if (!Array.isArray(previous)) {
+          return previous;
+        }
+        if (data && typeof data === "object") {
+          const exists = previous.some((cat) => cat.id === data.id || cat.name === data.name);
+          if (exists) {
+            return previous.map((cat) => (cat.id === data.id ? { ...cat, ...data } : cat));
+          }
+          return [...previous, { pending: 0, count: 0, ...data }];
+        }
+        if (resolvedName && !previous.some((cat) => cat.name === resolvedName)) {
+          return [
+            ...previous,
+            {
+              id: resolvedName,
+              name: resolvedName,
+              count: 0,
+              pending: 0,
+            },
+          ];
+        }
+        return previous;
+      });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
@@ -108,6 +131,10 @@ export default function Home() {
       if (variables?.name) {
         removeCategoryColor(variables.name);
       }
+      queryClient.setQueryData(["categories"], (previous) => {
+        if (!Array.isArray(previous)) return previous;
+        return previous.filter((category) => category.id !== variables?.id && category.name !== variables?.name);
+      });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
@@ -115,9 +142,24 @@ export default function Home() {
   const renameCategoryMutation = useMutation({
     mutationFn: ({ id, name }) => updateCategory(id, { name }),
     onSuccess: (data, variables) => {
-      if (variables?.previousName || variables?.name) {
-        renameCategoryColor(variables.previousName ?? variables.name, data?.name ?? variables.name);
+      const nextName = data?.name ?? variables?.name;
+      const previousName = variables?.previousName ?? variables?.name;
+      if (previousName && nextName) {
+        renameCategoryColor(previousName, nextName);
       }
+      queryClient.setQueryData(["categories"], (previous) => {
+        if (!Array.isArray(previous)) return previous;
+        return previous.map((category) => {
+          if (category.id === variables?.id || category.name === previousName) {
+            return {
+              ...category,
+              ...data,
+              name: nextName ?? category.name,
+            };
+          }
+          return category;
+        });
+      });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
@@ -261,7 +303,7 @@ export default function Home() {
           currentGroup={groupMeta.current_index + 1}
           totalGroups={groupMeta.items.length}
         />
-        <div className="batch-bar flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-sm">
+        <div className="batch-bar flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm">
           <div className="flex items-center gap-3">
             <select
               className="rounded border border-theme bg-[var(--surface-color)] px-3 py-2 text-sm text-theme shadow-sm focus:border-[var(--accent-color)] focus:outline-none"
