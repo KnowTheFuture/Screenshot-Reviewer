@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
+import themeConfig from "../themes.json";
+
 const STORAGE_KEY = "appSettings";
 const SETTINGS_EVENT = "app-settings:changed";
 
 const DEFAULT_SETTINGS = {
-  highlightColor: "#FFD700",
+  highlightColor: themeConfig?.light?.highlight ?? "#FFD700",
 };
 
 const loadSettings = () => {

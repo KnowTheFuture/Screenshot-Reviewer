@@ -27,7 +27,7 @@ function ScreenshotCard({ screenshot, isSelected, onClick, onOpen, tintStyle, ca
       data-category={categoryKey || undefined}
       style={tintStyle}
       className={clsx(
-        "screenshot-card group relative aspect-square w-full cursor-pointer overflow-hidden rounded-xl border transition",
+        "screenshot-card group relative aspect-square w-full cursor-pointer overflow-hidden transition",
         {
           selected: isSelected,
           tinted: Boolean(tintStyle),
@@ -143,24 +143,24 @@ export default function ScreenshotGrid({
   };
 
   return (
-    <section className="flex-1 overflow-auto bg-slate-50">
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+    <section className="grid-surface scroll-soft flex-1 overflow-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 text-sm text-muted">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded border border-slate-200 px-3 py-1 hover:border-brand-400 hover:text-brand-600"
+            className="rounded-full border border-theme px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted transition hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]"
             onClick={selectEntirePage}
           >
             Select page
           </button>
           <span>{selectionSet.size} selected</span>
         </div>
-        <div className="flex items-center gap-3 text-sm text-slate-500">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange?.(page - 1)}
-            className="rounded border border-slate-200 px-3 py-1 disabled:opacity-40"
+            className="rounded border border-theme px-3 py-1 text-xs font-semibold uppercase tracking-wide transition hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Prev
           </button>
@@ -171,13 +171,13 @@ export default function ScreenshotGrid({
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange?.(page + 1)}
-            className="rounded border border-slate-200 px-3 py-1 disabled:opacity-40"
+            className="rounded border border-theme px-3 py-1 text-xs font-semibold uppercase tracking-wide transition hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Next
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 px-6 pb-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 px-6 pb-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {screenshots.map((screenshot, index) => {
           const categoryKey = screenshot.primary_category ?? screenshot.category ?? "default";
           const categoryColor =
@@ -186,7 +186,7 @@ export default function ScreenshotGrid({
             CATEGORY_COLORS.default;
           const tintStyle =
             categoryFilter === "all"
-              ? { boxShadow: `0 0 6px ${categoryColor}`, "--category-color": categoryColor }
+              ? { "--category-color": categoryColor }
               : undefined;
 
           return (

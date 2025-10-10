@@ -10,12 +10,12 @@ export default function Toolbar({
   totalGroups,
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4">
+    <div className="toolbar-surface flex flex-wrap items-center justify-between gap-4 px-6 py-4">
       <div className="flex items-center gap-3">
         <select
           value={filter}
           onChange={(event) => onFilterChange?.(event.target.value)}
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          className="rounded-lg border border-theme bg-[var(--surface-color)] px-3 py-2 text-sm text-theme shadow-sm focus:border-[var(--accent-color)] focus:outline-none"
         >
           <option value="all">All</option>
           <option value="pending">Pending</option>
@@ -23,23 +23,23 @@ export default function Toolbar({
           <option value="low-confidence">Low confidence</option>
           <option value="re-review">Re-review</option>
         </select>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-subtle">
           <button
             type="button"
             onClick={onGroupPrev}
-            className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:border-brand-500 hover:text-brand-600"
+            className="rounded-full border border-theme px-3 py-1 text-[10px] text-muted transition hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]"
           >
-            Group ◀
+            ◀ Prev
           </button>
-          <span className="text-xs text-slate-400">
+          <span className="text-subtle">
             Group {currentGroup} / {totalGroups || 1}
           </span>
           <button
             type="button"
             onClick={onGroupNext}
-            className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:border-brand-500 hover:text-brand-600"
+            className="rounded-full border border-theme px-3 py-1 text-[10px] text-muted transition hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]"
           >
-            ▶
+            Next ▶
           </button>
         </div>
       </div>
@@ -47,22 +47,28 @@ export default function Toolbar({
         <input
           value={search}
           onChange={(event) => onSearchChange?.(event.target.value)}
-          className="w-full max-w-md rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          className="w-full max-w-lg rounded-lg border border-theme bg-[var(--surface-muted)] px-4 py-2 text-sm text-theme shadow-inner focus:border-[var(--accent-color)] focus:bg-[var(--surface-color)] focus:outline-none"
           placeholder="Search by tag, summary, or OCR text"
         />
       </div>
-      <div className="flex items-center gap-4 text-sm text-slate-500">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400">Reviewed</span>
-          <span className="font-semibold text-brand-600">{progress.reviewed}</span>
+      <div className="flex items-center gap-4 text-sm text-muted">
+        <div className="flex items-center gap-1.5">
+          <span className="text-subtle">Reviewed</span>
+          <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-strong)]">
+            {progress.reviewed}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400">Deferred</span>
-          <span className="font-semibold text-amber-600">{progress.deferred}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-subtle">Deferred</span>
+          <span className="rounded-full bg-[rgba(251,191,36,0.15)] px-2 py-0.5 text-xs font-semibold text-amber-600">
+            {progress.deferred}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400">Remaining</span>
-          <span className="font-semibold text-slate-700">{progress.remaining}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-subtle">Remaining</span>
+          <span className="rounded-full bg-[rgba(148,163,184,0.18)] px-2 py-0.5 text-xs font-semibold text-theme">
+            {progress.remaining}
+          </span>
         </div>
       </div>
     </div>

@@ -1,11 +1,20 @@
 export const CATEGORY_COLORS = {
-  coding: "#d0ebff",
-  design: "#ffe5d9",
-  misc: "#e9ecef",
-  General: "#f4f5f7",
-  Important: "#fde68a",
-  "To Review": "#c4b5fd",
-  default: "#f1f3f5",
+  All: "var(--highlight-color)",
+  Pending: "#F97316",
+  coding: "#6366f1",
+  Coding: "#6366f1",
+  design: "#f472b6",
+  Personal: "#ec4899",
+  Work: "#22c55e",
+  Gaming: "#3b82f6",
+  "Market Research": "#14b8a6",
+  Geoguessr: "#8b5cf6",
+  Wordle: "#facc15",
+  misc: "#e2e8f0",
+  General: "#64748b",
+  Important: "#f97316",
+  "To Review": "#0ea5e9",
+  default: "#94a3b8",
 };
 
 export default CATEGORY_COLORS;

@@ -199,14 +199,7 @@ export default function Home() {
   };
 
   return (
-    <div className="app-shell relative flex h-screen w-screen overflow-hidden">
-      <button
-        type="button"
-        className="absolute right-4 top-4 rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
-        onClick={() => setShowSettings(true)}
-      >
-        ⚙️ Settings
-      </button>
+    <div className="app-shell flex h-screen w-screen overflow-hidden">
       <Sidebar
         categories={categoryList}
         activeCategory={categoryFilter}
@@ -218,7 +211,7 @@ export default function Home() {
         onDelete={(id, name) => deleteCategoryMutation.mutate({ id, name })}
         onRename={(id, name, previousName) => renameCategoryMutation.mutate({ id, name, previousName })}
       />
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Toolbar
           filter={filter}
           onFilterChange={(value) => {
@@ -236,10 +229,10 @@ export default function Home() {
           currentGroup={groupMeta.current_index + 1}
           totalGroups={groupMeta.items.length}
         />
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-3 text-sm">
+        <div className="batch-bar flex flex-wrap items-center justify-between gap-4 px-6 py-3 text-sm">
           <div className="flex items-center gap-3">
             <select
-              className="rounded border border-slate-200 px-3 py-2"
+              className="rounded border border-theme bg-[var(--surface-color)] px-3 py-2 text-sm text-theme shadow-sm focus:border-[var(--accent-color)] focus:outline-none"
               value={batchCategory}
               onChange={(event) => setBatchCategory(event.target.value)}
             >
@@ -253,7 +246,7 @@ export default function Home() {
             </select>
             <button
               type="button"
-              className="rounded bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-40"
+              className="rounded bg-[var(--accent-color)] px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!selected.size || batchCategory === "none"}
               onClick={() => handleAssignCategory(batchCategory)}
             >
@@ -261,7 +254,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              className="rounded border border-red-200 px-3 py-2 text-sm text-red-500 hover:border-red-400 hover:text-red-600 disabled:opacity-40"
+              className="rounded border border-red-200 px-3 py-2 text-sm font-medium text-red-500 transition hover:border-red-400 hover:bg-[rgba(248,113,113,0.12)] hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!selected.size}
               onClick={handleDelete}
             >
@@ -269,14 +262,14 @@ export default function Home() {
             </button>
             <button
               type="button"
-              className="rounded border border-amber-300 px-3 py-2 text-sm text-amber-600 hover:border-amber-400 hover:text-amber-700 disabled:opacity-40"
+              className="rounded border border-amber-300 px-3 py-2 text-sm font-medium text-amber-600 transition hover:border-amber-400 hover:bg-[rgba(251,191,36,0.12)] hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!selected.size || isReclassifying}
               onClick={handleMarkPending}
             >
               Mark as Pending
             </button>
           </div>
-          <span className="text-slate-500">{selected.size} selected</span>
+          <span className="text-muted">{selected.size} selected</span>
         </div>
         <ScreenshotGrid
           screenshots={screenshots}
@@ -292,13 +285,14 @@ export default function Home() {
           categoryFilter={categoryFilter}
         />
         {screenshots.length === 0 && (
-          <div className="mt-8 text-center text-gray-500">{emptyMessage}</div>
+          <div className="mt-8 text-center text-muted">{emptyMessage}</div>
         )}
       </main>
       <LexiconPanel
         entries={lexiconEntries}
         onCreate={(payload) => createLexiconMutation.mutate(payload)}
         onDelete={(id) => deleteLexiconMutation.mutate(id)}
+        onOpenSettings={() => setShowSettings(true)}
       />
       <ScreenshotModal
         isOpen={Boolean(activeScreenshot)}

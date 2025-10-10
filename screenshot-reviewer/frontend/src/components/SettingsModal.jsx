@@ -57,11 +57,11 @@ function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-sm rounded-lg settings-surface border border-theme p-6 shadow-lg">
-        <h2 className="text-lg font-bold text-theme">Settings</h2>
+      <div className="w-full max-w-sm rounded-2xl settings-surface border border-theme p-6 shadow-2xl">
+        <h2 className="text-lg font-bold text-theme tracking-tight">Settings</h2>
 
         <div className="mt-4 space-y-2">
-          <label htmlFor="highlight" className="block text-sm font-semibold text-theme">
+          <label htmlFor="highlight" className="block text-sm font-semibold uppercase tracking-wide text-subtle">
             Selection Highlight
           </label>
           <input
@@ -69,17 +69,17 @@ function SettingsModal({
             type="color"
             value={settings.highlightColor}
             onChange={handleHighlightChange}
-            className="h-12 w-full cursor-pointer rounded border border-theme"
+            className="h-12 w-full cursor-pointer rounded border border-theme bg-[var(--surface-color)] shadow-inner"
           />
 
-          <label htmlFor="theme" className="block text-sm font-semibold text-theme">
+          <label htmlFor="theme" className="block text-sm font-semibold uppercase tracking-wide text-subtle">
             Theme
           </label>
           <select
             id="theme"
             value={theme}
             onChange={(event) => setTheme(event.target.value)}
-            className="w-full rounded border border-theme p-2 text-sm capitalize"
+            className="w-full rounded border border-theme bg-[var(--surface-color)] p-2 text-sm capitalize text-theme shadow-sm focus:border-[var(--accent-color)] focus:outline-none"
           >
             {themeNames.map((name) => (
               <option key={name} value={name}>
@@ -87,7 +87,7 @@ function SettingsModal({
               </option>
             ))}
           </select>
-          <p className="text-xs text-theme/60">
+          <p className="text-xs text-subtle">
             Background: {themeConfig[theme]?.background ?? "—"} · Text:{" "}
             {themeConfig[theme]?.text ?? "—"}
           </p>
@@ -96,16 +96,16 @@ function SettingsModal({
         {categories.length > 0 && (
           <div className="mt-6 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-theme">Category colors</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-subtle">Category colors</h3>
               <button
                 type="button"
-                className="text-xs text-brand-500 hover:text-brand-600"
+                className="text-xs font-semibold text-[var(--accent-color)] transition hover:text-[var(--accent-strong)]"
                 onClick={resetCategoryColors}
               >
                 Reset
               </button>
             </div>
-            <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+            <div className="scroll-soft max-h-48 space-y-2 overflow-y-auto pr-1">
               {categories.map((category) => {
                 const fallback =
                   categoryColors[category.name] ??
@@ -114,7 +114,7 @@ function SettingsModal({
                 return (
                   <label
                     key={category.id ?? category.name}
-                    className="flex items-center justify-between gap-3 rounded border border-theme px-3 py-2 text-sm text-theme"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-theme bg-[var(--surface-color)] px-3 py-2 text-sm text-theme shadow-sm"
                   >
                     <span className="truncate">{category.name}</span>
                     <input
@@ -134,19 +134,19 @@ function SettingsModal({
           <button
             type="button"
             onClick={handleClearSelection}
-            className="flex items-center justify-center rounded bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
+            className="flex items-center justify-center rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
           >
             🧹 Clear Saved Selection
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 transition hover:bg-gray-300"
+            className="rounded-lg border border-theme bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-theme transition hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]"
           >
             Close
           </button>
 
-          <p className="mt-2 text-sm text-theme/60">
+          <p className="mt-2 text-sm text-subtle">
             Version: {version}
           </p>
         </div>
