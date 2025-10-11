@@ -1,5 +1,4 @@
-@tailwind base;
-@tailwind components;
+@tailwindcss/preflight;
 @tailwind utilities;
 
 :root {
@@ -175,7 +174,7 @@ body[data-theme="matrix"] {
     var(--card-shadow);
 }
 
-.screenshot-card > * {
+.screenshot-card>* {
   position: relative;
   z-index: 1;
 }
