@@ -56,7 +56,7 @@ def list_categories():
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.post("/", response_model=Category, status_code=201)
+@router.post("", response_model=Category, status_code=201)
 def create_category(payload: CategoryCreate):
     try:
         categories = load_categories()

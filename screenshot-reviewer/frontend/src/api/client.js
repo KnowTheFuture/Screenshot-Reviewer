@@ -88,4 +88,9 @@ export const reclassifyScreenshots = async (payload) => {
   return data;
 };
 
+export const renameCategory = async ({ id, name }) => {
+  const { data } = await api.put(`/categories/${id}`, { name });
+  return data;
+};
+
 export default api;
