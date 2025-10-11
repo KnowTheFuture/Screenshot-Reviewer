@@ -38,7 +38,7 @@ def _annotate_counts(categories: List[dict]) -> List[Category]:
     return [Category.model_validate(cat) for cat in categories]
 
 
-@router.get("/", response_model=List[Category])
+@router.get("", response_model=List[Category])
 def list_categories():
     try:
         categories = load_categories()
@@ -56,7 +56,7 @@ def list_categories():
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.post("/", response_model=Category, status_code=201)
+@router.post("", response_model=Category, status_code=201)
 def create_category(payload: CategoryCreate):
     try:
         categories = load_categories()

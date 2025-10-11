@@ -32,6 +32,7 @@ Thumbs.db
 # IDE configs
 .vscode/
 .idea/
+!vite.config.js
 
 # ======================================
 # 🗂 Data and Generated Files
@@ -43,6 +44,10 @@ logs/
 *.json
 !screenshots.json          # Keep this file tracked
 !lexicon.json              # If you use a lexicon reference
+!categories.json           # If you use categories
+!package.json             # Keep this file tracked
+!package-lock.json
+!*.json
 
 # ======================================
 # 🖼 Image Rules

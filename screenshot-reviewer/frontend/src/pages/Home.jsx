@@ -22,8 +22,13 @@ import useSelectionStore from "../store/selectionStore.js";
 import useSelectionPersistence from "../hooks/useSelectionPersistence.js";
 import useSelectionActions from "../hooks/useSelectionActions.js";
 import useCategoryColorStore from "../store/categoryColorStore.js";
+import useLocalSettings from "../hooks/useLocalSettings.js";
 
-const PAGE_SIZE = 50;
+const computePageSize = (settings) => {
+  const cols = Math.max(1, Math.min(10, settings?.gridColumns ?? 5));
+  const rows = Math.max(1, Math.min(10, settings?.gridRows ?? 5));
+  return cols * rows;
+};
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -41,16 +46,22 @@ export default function Home() {
   const ensureCategoryColor = useCategoryColorStore((state) => state.ensureColor);
   const renameCategoryColor = useCategoryColorStore((state) => state.renameCategoryColor);
   const removeCategoryColor = useCategoryColorStore((state) => state.removeColor);
+  const [settings, setSettings] = useLocalSettings();
+
+  const gridColumns = Math.max(1, Math.min(10, settings?.gridColumns ?? 5));
+  const gridRows = Math.max(1, Math.min(10, settings?.gridRows ?? 5));
+  const gridGap = Math.max(0, Math.min(32, settings?.gridGap ?? 2));
+  const pageSize = computePageSize(settings);
 
   const effectiveFilter = categoryFilter === "pending" ? "pending" : filter;
   const categoryParam = categoryFilter === "all" || categoryFilter === "pending" ? undefined : categoryFilter;
 
   const screenshotsQuery = useQuery({
-    queryKey: ["screenshots", { page, filter: effectiveFilter, search, categoryFilter, groupId }],
+    queryKey: ["screenshots", { page, filter: effectiveFilter, search, categoryFilter, groupId, pageSize }],
     queryFn: () =>
       fetchScreenshots({
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
         filter: effectiveFilter,
         search,
         category: categoryParam,
@@ -82,11 +93,34 @@ export default function Home() {
   const createCategoryMutation = useMutation({
     mutationFn: (name) => createCategory({ name }),
     onSuccess: (data, name) => {
-      if (data?.name) {
-        ensureCategoryColor(data.name);
-      } else if (typeof name === "string") {
-        ensureCategoryColor(name);
+      const resolvedName = data?.name ?? (typeof name === "string" ? name : undefined);
+      if (resolvedName) {
+        ensureCategoryColor(resolvedName);
       }
+      queryClient.setQueryData(["categories"], (previous) => {
+        if (!Array.isArray(previous)) {
+          return previous;
+        }
+        if (data && typeof data === "object") {
+          const exists = previous.some((cat) => cat.id === data.id || cat.name === data.name);
+          if (exists) {
+            return previous.map((cat) => (cat.id === data.id ? { ...cat, ...data } : cat));
+          }
+          return [...previous, { pending: 0, count: 0, ...data }];
+        }
+        if (resolvedName && !previous.some((cat) => cat.name === resolvedName)) {
+          return [
+            ...previous,
+            {
+              id: resolvedName,
+              name: resolvedName,
+              count: 0,
+              pending: 0,
+            },
+          ];
+        }
+        return previous;
+      });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
@@ -97,6 +131,10 @@ export default function Home() {
       if (variables?.name) {
         removeCategoryColor(variables.name);
       }
+      queryClient.setQueryData(["categories"], (previous) => {
+        if (!Array.isArray(previous)) return previous;
+        return previous.filter((category) => category.id !== variables?.id && category.name !== variables?.name);
+      });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
@@ -104,9 +142,24 @@ export default function Home() {
   const renameCategoryMutation = useMutation({
     mutationFn: ({ id, name }) => updateCategory(id, { name }),
     onSuccess: (data, variables) => {
-      if (variables?.previousName || variables?.name) {
-        renameCategoryColor(variables.previousName ?? variables.name, data?.name ?? variables.name);
+      const nextName = data?.name ?? variables?.name;
+      const previousName = variables?.previousName ?? variables?.name;
+      if (previousName && nextName) {
+        renameCategoryColor(previousName, nextName);
       }
+      queryClient.setQueryData(["categories"], (previous) => {
+        if (!Array.isArray(previous)) return previous;
+        return previous.map((category) => {
+          if (category.id === variables?.id || category.name === previousName) {
+            return {
+              ...category,
+              ...data,
+              name: nextName ?? category.name,
+            };
+          }
+          return category;
+        });
+      });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
@@ -121,7 +174,18 @@ export default function Home() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lexicon"] }),
   });
 
-  const screenshots = screenshotsQuery.data?.items ?? [];
+  const screenshots = useMemo(() => {
+    const items = screenshotsQuery.data?.items ?? [];
+    return items.map((item) => {
+      if (item?.primary_category || item?.status === "deleted") {
+        return item;
+      }
+      if (item?.status === "pending") {
+        return item;
+      }
+      return { ...item, status: "pending" };
+    });
+  }, [screenshotsQuery.data]);
   const totalPages = screenshotsQuery.data?.total_pages ?? 1;
   const progress = screenshotsQuery.data?.progress ?? { reviewed: 0, deferred: 0, remaining: 0 };
   const groupMeta = screenshotsQuery.data?.groups ?? { items: [], current_index: 0 };
@@ -134,6 +198,12 @@ export default function Home() {
     if (!Array.isArray(categoriesQuery.data)) return;
     categoriesQuery.data.forEach((category) => ensureCategoryColor(category.name));
   }, [categoriesQuery.data, ensureCategoryColor]);
+
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [pageSize, page, setPage]);
 
   const categoryList = useMemo(() => {
     const raw = categoriesQuery.data;
@@ -184,8 +254,12 @@ export default function Home() {
   };
 
   const handleModalSave = (draft) => {
+    const payload = { ...draft };
+    if (!payload.primary_category) {
+      payload.status = "pending";
+    }
     setActiveScreenshot(null);
-    updateMutation.mutate({ id: draft.id, payload: draft });
+    updateMutation.mutate({ id: payload.id, payload });
   };
 
   const handleGroupNavigate = (offset) => {
@@ -199,14 +273,7 @@ export default function Home() {
   };
 
   return (
-    <div className="app-shell relative flex h-screen w-screen overflow-hidden">
-      <button
-        type="button"
-        className="absolute right-4 top-4 rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
-        onClick={() => setShowSettings(true)}
-      >
-        ⚙️ Settings
-      </button>
+    <div className="app-shell flex h-screen w-screen overflow-hidden">
       <Sidebar
         categories={categoryList}
         activeCategory={categoryFilter}
@@ -218,7 +285,7 @@ export default function Home() {
         onDelete={(id, name) => deleteCategoryMutation.mutate({ id, name })}
         onRename={(id, name, previousName) => renameCategoryMutation.mutate({ id, name, previousName })}
       />
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Toolbar
           filter={filter}
           onFilterChange={(value) => {
@@ -236,10 +303,10 @@ export default function Home() {
           currentGroup={groupMeta.current_index + 1}
           totalGroups={groupMeta.items.length}
         />
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-3 text-sm">
+        <div className="batch-bar flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm">
           <div className="flex items-center gap-3">
             <select
-              className="rounded border border-slate-200 px-3 py-2"
+              className="rounded border border-theme bg-[var(--surface-color)] px-3 py-2 text-sm text-theme shadow-sm focus:border-[var(--accent-color)] focus:outline-none"
               value={batchCategory}
               onChange={(event) => setBatchCategory(event.target.value)}
             >
@@ -253,7 +320,7 @@ export default function Home() {
             </select>
             <button
               type="button"
-              className="rounded bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-40"
+              className="rounded bg-[var(--accent-color)] px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!selected.size || batchCategory === "none"}
               onClick={() => handleAssignCategory(batchCategory)}
             >
@@ -261,7 +328,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              className="rounded border border-red-200 px-3 py-2 text-sm text-red-500 hover:border-red-400 hover:text-red-600 disabled:opacity-40"
+              className="rounded border border-red-200 px-3 py-2 text-sm font-medium text-red-500 transition hover:border-red-400 hover:bg-[rgba(248,113,113,0.12)] hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!selected.size}
               onClick={handleDelete}
             >
@@ -269,14 +336,14 @@ export default function Home() {
             </button>
             <button
               type="button"
-              className="rounded border border-amber-300 px-3 py-2 text-sm text-amber-600 hover:border-amber-400 hover:text-amber-700 disabled:opacity-40"
+              className="rounded border border-amber-300 px-3 py-2 text-sm font-medium text-amber-600 transition hover:border-amber-400 hover:bg-[rgba(251,191,36,0.12)] hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!selected.size || isReclassifying}
               onClick={handleMarkPending}
             >
               Mark as Pending
             </button>
           </div>
-          <span className="text-slate-500">{selected.size} selected</span>
+          <span className="text-muted">{selected.size} selected</span>
         </div>
         <ScreenshotGrid
           screenshots={screenshots}
@@ -290,15 +357,20 @@ export default function Home() {
             clear();
           }}
           categoryFilter={categoryFilter}
+          gridColumns={gridColumns}
+          gridRows={gridRows}
+          gridGap={gridGap}
+          pageSize={pageSize}
         />
         {screenshots.length === 0 && (
-          <div className="mt-8 text-center text-gray-500">{emptyMessage}</div>
+          <div className="mt-8 text-center text-muted">{emptyMessage}</div>
         )}
       </main>
       <LexiconPanel
         entries={lexiconEntries}
         onCreate={(payload) => createLexiconMutation.mutate(payload)}
         onDelete={(id) => deleteLexiconMutation.mutate(id)}
+        onOpenSettings={() => setShowSettings(true)}
       />
       <ScreenshotModal
         isOpen={Boolean(activeScreenshot)}
@@ -312,6 +384,8 @@ export default function Home() {
         onClose={() => setShowSettings(false)}
         onClearSelection={clearPersistence}
         categories={categoryList}
+        settings={settings}
+        onChangeSettings={setSettings}
       />
     </div>
   );

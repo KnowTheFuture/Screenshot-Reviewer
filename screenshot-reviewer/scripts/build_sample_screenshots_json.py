@@ -1,32 +1,42 @@
 # scripts/build_sample_screenshots_json.py
 import json
-from pathlib import Path
 import uuid
 import datetime
+from pathlib import Path
+import argparse
 
-# Source folder containing the actual screenshots
+# --- Config ---
 SCREENSHOTS_DIR = Path("/Volumes/990_Pro/Screenshots")
-
-# Destination file for sample output
 DEST_FILE = Path("/Volumes/990_Pro/Screenshots/screenshot-reviewer/backend/data/screenshots.json")
 
-# Collect up to 10 image files (recursive search)
+# --- Argument Parser for batch size ---
+parser = argparse.ArgumentParser(description="Add new screenshots to screenshots.json safely.")
+parser.add_argument("--batch", type=int, default=25, help="Number of new screenshots to add (default: 25)")
+args = parser.parse_args()
+batch_size = args.batch
+
+# --- Load existing data if available ---
+if DEST_FILE.exists():
+    existing = json.loads(DEST_FILE.read_text())
+else:
+    existing = []
+
+existing_paths = {rec["path"] for rec in existing}
+
+# --- Collect new image files (skip duplicates) ---
 image_files = [
     f for f in SCREENSHOTS_DIR.rglob("*")
-    if f.suffix.lower() in (".png", ".jpg", ".jpeg")
-][:10]
+    if f.suffix.lower() in (".png", ".jpg", ".jpeg") and str(f) not in existing_paths
+][:batch_size]
 
-# Default category for now
-CATEGORY_DEFAULT = "41941357919649358d762b8187fd5a96"
-
-records = []
+new_records = []
 for img in image_files:
-    records.append({
+    new_records.append({
         "id": f"sha1_{uuid.uuid4().hex[:8]}",
         "path": str(img),
         "tags": [],
         "summary": "",
-        "primary_category": CATEGORY_DEFAULT,
+        "primary_category": "pending",  # ⬅️ not assigned yet
         "status": "pending",
         "confidence": 0.0,
         "ocr_text": "",
@@ -34,5 +44,14 @@ for img in image_files:
         "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
     })
 
-DEST_FILE.write_text(json.dumps(records, indent=2))
-print(f"✅ Sample file written with {len(records)} screenshots → {DEST_FILE}")
+# --- Clean existing data if needed ---
+for rec in existing:
+    if rec.get("status") == "pending" and not rec.get("primary_category"):
+        rec["primary_category"] = "pending"
+
+combined = existing + new_records
+
+# --- Write combined file ---
+DEST_FILE.write_text(json.dumps(combined, indent=2))
+
+print(f"✅ Added {len(new_records)} new screenshots (total: {len(combined)}) → {DEST_FILE}")

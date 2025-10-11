@@ -1,9 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL ||
-    (import.meta.env.DEV ? "http://127.0.0.1:8000" : "/"),
+  baseURL: "/api",
   timeout: 15000,
 });
 
@@ -87,6 +85,11 @@ export const deleteLexiconEntry = async (id) => {
 
 export const reclassifyScreenshots = async (payload) => {
   const { data } = await api.post("/screenshots/reclassify", payload);
+  return data;
+};
+
+export const renameCategory = async ({ id, name }) => {
+  const { data } = await api.put(`/categories/${id}`, { name });
   return data;
 };
 
